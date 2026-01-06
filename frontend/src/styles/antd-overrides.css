@@ -1,0 +1,94 @@
+/* Override Ant Design's default colors using CSS variables */
+
+/* Primary button */
+.ant-btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.ant-btn-primary:active {
+    background-color: var(--color-primary-active);
+    border-color: var(--color-primary-active);
+}
+
+/* Danger button */
+.ant-btn-dangerous {
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.ant-btn-dangerous:hover,
+.ant-btn-dangerous:focus {
+    color: var(--color-error);
+    border-color: var(--color-error);
+    opacity: 0.8;
+}
+
+/* Tabs */
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: var(--color-primary);
+}
+
+.ant-tabs-ink-bar {
+    background: var(--color-primary);
+}
+
+.ant-tabs-tab:hover {
+    color: var(--color-primary-hover);
+}
+
+/* Input focus */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input:hover {
+    border-color: var(--color-primary);
+}
+
+.ant-input:focus,
+.ant-input-focused {
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Select */
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+    border-color: var(--color-primary);
+}
+
+.ant-select-focused .ant-select-selector {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* Progress */
+.ant-progress-bg {
+    background-color: var(--color-primary);
+}
+
+/* Card */
+.ant-card {
+    border-radius: var(--border-radius-md);
+}
+
+/* Modal */
+.ant-modal-content {
+    border-radius: var(--border-radius-lg);
+}
+
+/* Message */
+.ant-message-success .anticon {
+    color: var(--color-success);
+}
+
+.ant-message-error .anticon {
+    color: var(--color-error);
+}
+
+.ant-message-warning .anticon {
+    color: var(--color-warning);
+}

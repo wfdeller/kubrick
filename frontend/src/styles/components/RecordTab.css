@@ -1,0 +1,298 @@
+.record-tab {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.record-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+/* Top row: video + metadata side by side on large screens */
+.record-top-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .record-top-row {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+}
+
+.record-video-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex: 1;
+    min-width: 0;
+}
+
+/* Camera Preview */
+.camera-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #1a1a1a;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+}
+
+@media (max-width: 1023px) {
+    .camera-preview {
+        max-width: 800px;
+    }
+}
+
+.camera-preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+}
+
+.placeholder-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+.preview-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror the video */
+}
+
+.camera-recording {
+    box-shadow: 0 0 0 3px var(--color-recording);
+}
+
+.recording-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 3px solid var(--color-recording);
+    pointer-events: none;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Recording Info */
+.record-info {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.recording-dot {
+    width: 12px;
+    height: 12px;
+    background-color: var(--color-recording);
+    border-radius: 50%;
+    animation: pulse-dot 1s infinite;
+}
+
+@keyframes pulse-dot {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.9);
+    }
+}
+
+.recording-time {
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+.recording-paused {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-warning);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Upload Progress */
+.upload-progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    width: 100%;
+    max-width: 400px;
+    padding: var(--spacing-md);
+    background-color: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.upload-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.upload-icon {
+    font-size: 20px;
+    color: var(--color-primary);
+}
+
+.upload-progress .ant-progress {
+    flex: 1;
+    margin: 0;
+}
+
+.upload-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    padding-left: 32px;
+}
+
+.upload-chunks {
+    font-variant-numeric: tabular-nums;
+}
+
+.upload-speed {
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+/* Controls */
+.record-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background-color: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+    width: 100%;
+}
+
+.record-controls-row {
+    display: flex;
+    gap: var(--spacing-md);
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.quality-select {
+    width: 140px;
+    flex-shrink: 0;
+}
+
+.title-input {
+    flex: 1;
+    max-width: 400px;
+}
+
+.record-button {
+    flex-shrink: 0;
+}
+
+.stop-button,
+.pause-button,
+.resume-button {
+    min-width: 140px;
+}
+
+/* Error Alert */
+.record-error {
+    width: 100%;
+}
+
+/* Metadata Card */
+.metadata-card {
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .metadata-card {
+        width: 280px;
+        flex-shrink: 0;
+    }
+}
+
+.metadata-card .ant-card-head {
+    min-height: auto;
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.metadata-card .ant-card-head-title {
+    font-size: 14px;
+    padding: var(--spacing-xs) 0;
+}
+
+.metadata-card .ant-card-body {
+    padding: var(--spacing-md);
+}
+
+.metadata-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 1023px) {
+    .metadata-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+.metadata-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.metadata-field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.metadata-field .ant-input {
+    font-size: 14px;
+}
+

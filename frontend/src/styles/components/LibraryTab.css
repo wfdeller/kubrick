@@ -1,0 +1,231 @@
+.library-tab {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Filters */
+.library-filters {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.filter-input {
+    width: 300px;
+}
+
+.sort-select {
+    width: 180px;
+}
+
+/* Count */
+.library-count {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+/* Loading / Empty states */
+.library-loading,
+.library-error,
+.library-empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+}
+
+.library-error {
+    color: var(--color-error);
+}
+
+/* Video Grid */
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+/* Video Card */
+.video-card {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.video-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.video-thumbnail {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background-color: #1a1a1a;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.video-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumbnail-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--color-text-secondary);
+    font-size: 48px;
+}
+
+.thumbnail-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color var(--transition-fast);
+}
+
+.video-thumbnail:hover .thumbnail-overlay {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.play-icon {
+    font-size: 48px;
+    color: white;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.video-thumbnail:hover .play-icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.duration-badge {
+    position: absolute;
+    bottom: var(--spacing-sm);
+    right: var(--spacing-sm);
+    padding: 2px var(--spacing-sm);
+    background-color: rgba(0, 0, 0, 0.75);
+    color: white;
+    font-size: 12px;
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Card Meta */
+.card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.recorder-name {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.created-date {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.card-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-xs);
+}
+
+.card-tags {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.archive-icon {
+    font-size: 16px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    transition: color var(--transition-fast);
+}
+
+.archive-icon:hover {
+    color: var(--color-primary);
+}
+
+/* Video Player Modal */
+.video-modal .ant-modal-content {
+    padding: 0;
+    overflow: hidden;
+}
+
+.video-modal .ant-modal-close {
+    top: 8px;
+    right: 8px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+}
+
+.video-player {
+    display: flex;
+    flex-direction: column;
+}
+
+.player-video-container {
+    background-color: #000;
+}
+
+.player-video {
+    width: 100%;
+    max-height: 500px;
+}
+
+.player-info {
+    padding: var(--spacing-lg);
+}
+
+.player-title {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.player-details {
+    margin-bottom: var(--spacing-md);
+}
+
+.session-info {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.session-info h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+/* Load More */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-lg) 0;
+}

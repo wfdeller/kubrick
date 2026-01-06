@@ -1,0 +1,46 @@
+:root {
+    /* Primary colors - replace with corporate colors */
+    --color-primary: #1890ff;
+    --color-primary-hover: #40a9ff;
+    --color-primary-active: #096dd9;
+
+    /* Status colors */
+    --color-success: #52c41a;
+    --color-warning: #faad14;
+    --color-error: #ff4d4f;
+
+    /* Neutral colors */
+    --color-text: #262626;
+    --color-text-secondary: #8c8c8c;
+    --color-background: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-border: #d9d9d9;
+
+    /* Recording indicator */
+    --color-recording: #ff4d4f;
+
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* Header */
+    --header-height: 64px;
+    --header-background: var(--color-surface);
+
+    /* Border radius */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+}

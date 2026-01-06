@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: ${REGISTRY:-kubrick}/kubrick-frontend:${VERSION:-latest}
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_OKTA_ENABLED: ${VITE_OKTA_ENABLED:-false}
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - kubrick
+
+  backend:
+    image: ${REGISTRY:-kubrick}/kubrick-backend:${VERSION:-latest}
+    build: ./backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=${MONGODB_URI}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-gcp}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+      - OKTA_ENABLED=${OKTA_ENABLED:-false}
+      - OKTA_ISSUER=${OKTA_ISSUER}
+      - OKTA_CLIENT_ID=${OKTA_CLIENT_ID}
+      - OKTA_AUDIENCE=${OKTA_AUDIENCE}
+      - FRONTEND_URL=${FRONTEND_URL}
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - kubrick
+
+networks:
+  kubrick:
+    driver: bridge

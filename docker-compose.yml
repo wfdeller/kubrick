@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:3001
+    ports:
+      - "5173:8080"
+    depends_on:
+      - backend
+    networks:
+      - kubrick
+
+  backend:
+    build: ./backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/kubrick
+      - STORAGE_PROVIDER=gcp
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:5173
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - kubrick
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - kubrick
+
+networks:
+  kubrick:
+    driver: bridge
+
+volumes:
+  mongo_data:
