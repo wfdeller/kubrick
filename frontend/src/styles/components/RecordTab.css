@@ -237,6 +237,20 @@
     min-width: 140px;
 }
 
+/* Live Stream Toggle */
+.live-stream-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 0 var(--spacing-sm);
+}
+
+.live-stream-label {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
 /* Error Alert */
 .record-error {
     width: 100%;

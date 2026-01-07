@@ -2,11 +2,118 @@ import express from 'express';
 import streamManager from '../services/streaming/StreamManager.js';
 import Recording from '../models/Recording.js';
 import { requireLiveStreaming, getFeatureFlags } from '../utils/featureFlags.js';
+import { downloadFile } from '../services/storage/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
 
-// Apply feature flag check to all routes
+// ============================================
+// HLS PROXY ENDPOINTS (No feature flag required)
+// These endpoints proxy HLS content from cloud storage
+// to avoid signed URL issues with relative segment paths
+// ============================================
+
+/**
+ * GET /api/streams/:recordingId/hls/manifest.m3u8
+ * Proxy the HLS manifest file
+ */
+router.get('/:recordingId/hls/manifest.m3u8', async (req, res, next) => {
+    try {
+        const { recordingId } = req.params;
+
+        const recording = await Recording.findById(recordingId);
+        if (!recording) {
+            return res.status(404).json({
+                errors: [{
+                    status: '404',
+                    code: 'NOT_FOUND',
+                    title: 'Recording Not Found',
+                }],
+            });
+        }
+
+        if (recording.playbackFormat !== 'hls') {
+            return res.status(400).json({
+                errors: [{
+                    status: '400',
+                    code: 'INVALID_FORMAT',
+                    title: 'Not an HLS recording',
+                }],
+            });
+        }
+
+        const manifestKey = recording.storageKey || `streams/${recordingId}/stream.m3u8`;
+        const bucket = recording.storageBucket || process.env.GCP_BUCKET_NAME || 'kubrick-videos';
+
+        const manifestContent = await downloadFile(bucket, manifestKey);
+
+        res.set('Content-Type', 'application/vnd.apple.mpegurl');
+        res.set('Cache-Control', 'no-cache');
+        res.send(manifestContent);
+    } catch (err) {
+        logger.error('Failed to proxy HLS manifest', { recordingId: req.params.recordingId, error: err.message });
+        next(err);
+    }
+});
+
+/**
+ * GET /api/streams/:recordingId/hls/:segment
+ * Proxy HLS segment files (.ts files)
+ */
+router.get('/:recordingId/hls/:segment', async (req, res, next) => {
+    try {
+        const { recordingId, segment } = req.params;
+
+        // Validate segment filename to prevent path traversal
+        if (!segment.match(/^[\w\-]+\.(ts|m3u8)$/)) {
+            return res.status(400).json({
+                errors: [{
+                    status: '400',
+                    code: 'INVALID_SEGMENT',
+                    title: 'Invalid segment filename',
+                }],
+            });
+        }
+
+        const recording = await Recording.findById(recordingId);
+        if (!recording) {
+            return res.status(404).json({
+                errors: [{
+                    status: '404',
+                    code: 'NOT_FOUND',
+                    title: 'Recording Not Found',
+                }],
+            });
+        }
+
+        const bucket = recording.storageBucket || process.env.GCP_BUCKET_NAME || 'kubrick-videos';
+        const segmentKey = `streams/${recordingId}/${segment}`;
+
+        const segmentContent = await downloadFile(bucket, segmentKey);
+
+        // Set appropriate content type
+        const contentType = segment.endsWith('.ts')
+            ? 'video/mp2t'
+            : 'application/vnd.apple.mpegurl';
+
+        res.set('Content-Type', contentType);
+        res.set('Cache-Control', 'public, max-age=31536000'); // Segments are immutable
+        res.send(segmentContent);
+    } catch (err) {
+        logger.error('Failed to proxy HLS segment', {
+            recordingId: req.params.recordingId,
+            segment: req.params.segment,
+            error: err.message,
+        });
+        next(err);
+    }
+});
+
+// ============================================
+// LIVE STREAMING ROUTES (Feature flag required)
+// ============================================
+
+// Apply feature flag check to remaining routes
 router.use(requireLiveStreaming);
 
 /**

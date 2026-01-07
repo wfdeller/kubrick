@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Button, Select, Alert, Progress, Input, message, Card } from 'antd';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Button, Select, Alert, Progress, Input, message, Card, Switch, Tag, Tooltip } from 'antd';
 import {
     VideoCameraOutlined,
     PauseCircleOutlined,
@@ -9,11 +9,15 @@ import {
     CloseCircleOutlined,
     UserOutlined,
     FormOutlined,
+    WifiOutlined,
+    TeamOutlined,
 } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMediaRecorder } from '../../hooks/useMediaRecorder';
 import { useSessionInfo } from '../../hooks/useSessionInfo';
 import { useChunkedUpload } from '../../hooks/useChunkedUpload';
+import { useLiveStream } from '../../hooks/useLiveStream';
+import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { useRecordingStore } from '../../stores/recordingStore';
 import { usePreferencesStore } from '../../stores/preferencesStore';
 import CameraPreview from './CameraPreview';
@@ -47,9 +51,12 @@ const RecordTab = () => {
     const queryClient = useQueryClient();
     const [title, setTitle] = useState('');
     const [currentRecordingId, setCurrentRecordingId] = useState(null);
+    const [liveStreamEnabled, setLiveStreamEnabled] = useState(false);
     const timerRef = useRef(null);
     const cameraRef = useRef(null);
     const thumbnailBlobRef = useRef(null);
+
+    const { isLiveStreamingEnabled } = useFeatureFlags();
 
     const {
         defaultQuality,
@@ -112,6 +119,30 @@ const RecordTab = () => {
         currentSpeed,
     } = useChunkedUpload();
 
+    // Live streaming hook
+    const {
+        isConnected: wsConnected,
+        isStreaming,
+        viewerCount,
+        connect: connectLiveStream,
+        disconnect: disconnectLiveStream,
+        startStream: startLiveStreamSession,
+        stopStream: stopLiveStreamSession,
+        sendChunk,
+    } = useLiveStream();
+
+    // Callback to send chunks when live streaming
+    const handleChunk = useCallback(
+        (chunk) => {
+            if (liveStreamEnabled && isStreaming) {
+                chunk.arrayBuffer().then((buffer) => {
+                    sendChunk(buffer);
+                });
+            }
+        },
+        [liveStreamEnabled, isStreaming, sendChunk]
+    );
+
     const {
         stream,
         isRecording,
@@ -125,13 +156,22 @@ const RecordTab = () => {
         resumeRecording,
         cleanup,
         clearError,
-    } = useMediaRecorder(defaultQuality);
+    } = useMediaRecorder(defaultQuality, liveStreamEnabled ? handleChunk : null);
 
     // Initialize camera on mount
     useEffect(() => {
         initializeStream();
         return () => cleanup();
     }, []);
+
+    // Connect to WebSocket when live streaming is enabled
+    useEffect(() => {
+        if (liveStreamEnabled && isLiveStreamingEnabled) {
+            connectLiveStream();
+        } else {
+            disconnectLiveStream();
+        }
+    }, [liveStreamEnabled, isLiveStreamingEnabled]);
 
     // Timer for recording duration
     useEffect(() => {
@@ -146,9 +186,20 @@ const RecordTab = () => {
     }, [isRecording, isPaused, duration, updateDuration]);
 
     // Handle recording completion and upload
+    // Skip chunked upload if live streaming was used (content already uploaded as HLS)
     useEffect(() => {
         if (recordedBlob && status === 'stopped') {
-            handleUpload(recordedBlob);
+            if (liveStreamEnabled && currentRecordingId) {
+                // Live stream already uploaded content - just mark as complete
+                message.success('Live recording complete! Video available in library.');
+                completeUpload();
+                setTitle('');
+                setCurrentRecordingId(null);
+                queryClient.invalidateQueries({ queryKey: ['recordings'] });
+            } else {
+                // Standard recording - upload the blob
+                handleUpload(recordedBlob);
+            }
         }
     }, [recordedBlob, status]);
 
@@ -158,6 +209,51 @@ const RecordTab = () => {
             return;
         }
         clearError();
+
+        // If live streaming is enabled, create recording first and start stream session
+        if (liveStreamEnabled && wsConnected) {
+            try {
+                const recordingData = {
+                    data: {
+                        type: 'recordings',
+                        attributes: {
+                            title: title.trim() || `Live Recording ${new Date().toLocaleString()}`,
+                            recorderName: recorderName,
+                            metadata: metadata,
+                            quality: defaultQuality,
+                            mimeType: 'video/webm',
+                            playbackFormat: 'hls',
+                            sessionInfo: sessionInfo,
+                        },
+                    },
+                };
+
+                const metaResponse = await fetch('/api/recordings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/vnd.api+json' },
+                    body: JSON.stringify(recordingData),
+                });
+
+                if (!metaResponse.ok) {
+                    throw new Error('Failed to create recording metadata');
+                }
+
+                const metaResult = await metaResponse.json();
+                const recordingId = metaResult.data.id;
+                setCurrentRecordingId(recordingId);
+
+                // Start live stream session
+                const streamStarted = startLiveStreamSession(recordingId);
+                if (!streamStarted) {
+                    throw new Error('Failed to start live stream session');
+                }
+
+                message.success('Live stream started!');
+            } catch (err) {
+                message.error(`Failed to start live stream: ${err.message}`);
+                return;
+            }
+        }
 
         // Capture thumbnail before starting (first frame)
         if (cameraRef.current) {
@@ -173,6 +269,12 @@ const RecordTab = () => {
     };
 
     const handleStopRecording = () => {
+        // Stop live stream session if active
+        if (liveStreamEnabled && isStreaming) {
+            stopLiveStreamSession();
+            message.info('Live stream ended');
+        }
+
         stopMediaRecording();
         setRecordingStopped();
     };
@@ -193,6 +295,7 @@ const RecordTab = () => {
                         quality: defaultQuality,
                         mimeType: blob.type,
                         fileBytes: blob.size,
+                        playbackFormat: 'video',
                         sessionInfo: sessionInfo,
                     },
                 },
@@ -300,6 +403,16 @@ const RecordTab = () => {
                                     <span className='recording-dot' />
                                     <span className='recording-time'>{formatDuration(duration)}</span>
                                     {isPaused && <span className='recording-paused'>PAUSED</span>}
+                                    {liveStreamEnabled && isStreaming && (
+                                        <>
+                                            <Tag color='red' icon={<WifiOutlined />}>
+                                                LIVE
+                                            </Tag>
+                                            <Tag icon={<TeamOutlined />}>
+                                                {viewerCount} viewer{viewerCount !== 1 ? 's' : ''}
+                                            </Tag>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -374,6 +487,26 @@ const RecordTab = () => {
                             className='quality-select'
                             size='large'
                         />
+                        {isLiveStreamingEnabled && (
+                            <Tooltip title='Enable live streaming to allow others to watch in real-time'>
+                                <div className='live-stream-toggle'>
+                                    <Switch
+                                        checked={liveStreamEnabled}
+                                        onChange={setLiveStreamEnabled}
+                                        disabled={isUploading}
+                                    />
+                                    <span className='live-stream-label'>
+                                        <WifiOutlined style={{ marginRight: 4 }} />
+                                        Live
+                                    </span>
+                                    {liveStreamEnabled && (
+                                        <Tag color={wsConnected ? 'green' : 'orange'} style={{ marginLeft: 8 }}>
+                                            {wsConnected ? 'Ready' : 'Connecting...'}
+                                        </Tag>
+                                    )}
+                                </div>
+                            </Tooltip>
+                        )}
                         <Input
                             placeholder='Recording title (optional)'
                             value={title}
@@ -387,7 +520,7 @@ const RecordTab = () => {
                             size='large'
                             icon={<VideoCameraOutlined />}
                             onClick={handleStartRecording}
-                            disabled={!stream || isUploading}
+                            disabled={!stream || isUploading || (liveStreamEnabled && !wsConnected)}
                             className='record-button'
                         >
                             Start Recording

@@ -60,6 +60,21 @@ const RecordingSchema = new Schema(
         thumbnailKey: String, // Storage key for thumbnail image
         uploadId: String, // For resumable/multipart upload sessions
 
+        // Playback format determines how to play the video
+        playbackFormat: {
+            type: String,
+            enum: ['video', 'hls'],
+            required: true,
+        },
+
+        // Live streaming metadata
+        isLiveStreaming: {
+            type: Boolean,
+            default: false,
+        },
+        streamStartedAt: Date,
+        streamEndedAt: Date,
+
         // Video properties
         duration: {
             type: Number,

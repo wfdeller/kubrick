@@ -15,6 +15,7 @@ export const RecordingSerializer = new Serializer('recordings', {
         'quality',
         'sessionInfo',
         'status',
+        'playbackFormat',
         'videoUrl',
         'thumbnailUrl',
         'recordedAt',

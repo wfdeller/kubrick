@@ -157,3 +157,25 @@ export const getStreamPlaybackUrl = async (bucket, key) => {
     // Long-lived read URL for playback
     return provider.getSignedUrl(bucket, key, 'read', 'application/vnd.apple.mpegurl');
 };
+
+/**
+ * Download a file from storage as a buffer
+ * @param {string} bucket - Bucket name
+ * @param {string} key - Object key
+ * @returns {Promise<Buffer>}
+ */
+export const downloadFile = async (bucket, key) => {
+    const provider = getProvider();
+    return provider.downloadFile(bucket, key);
+};
+
+/**
+ * Create a read stream for a file in storage
+ * @param {string} bucket - Bucket name
+ * @param {string} key - Object key
+ * @returns {ReadableStream}
+ */
+export const createReadStream = (bucket, key) => {
+    const provider = getProvider();
+    return provider.createReadStream(bucket, key);
+};

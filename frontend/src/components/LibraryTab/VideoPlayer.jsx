@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Descriptions, Tag } from 'antd';
+import HLSPlayer from '../common/HLSPlayer';
 
 const formatDuration = (seconds) => {
     if (!seconds) return '00:00';
@@ -46,9 +47,16 @@ const VideoPlayer = ({ recording }) => {
     return (
         <div className='video-player'>
             <div className='player-video-container'>
-                <video ref={videoRef} controls autoPlay className='player-video' src={attributes.videoUrl}>
-                    Your browser does not support the video tag.
-                </video>
+                {attributes.playbackFormat === 'hls' ? (
+                    <HLSPlayer
+                        src={attributes.videoUrl}
+                        autoPlay
+                    />
+                ) : (
+                    <video ref={videoRef} controls autoPlay className='player-video' src={attributes.videoUrl}>
+                        Your browser does not support the video tag.
+                    </video>
+                )}
             </div>
 
             <div className='player-info'>
@@ -108,6 +116,7 @@ VideoPlayer.propTypes = {
             createdAt: PropTypes.string.isRequired,
             recordedAt: PropTypes.string,
             videoUrl: PropTypes.string,
+            playbackFormat: PropTypes.oneOf(['video', 'hls']),
             sessionInfo: PropTypes.shape({
                 browserName: PropTypes.string,
                 browserVersion: PropTypes.string,

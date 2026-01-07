@@ -45,14 +45,19 @@ router.get('/', async (req, res, next) => {
             Recording.countDocuments(query),
         ]);
 
-        // Generate signed URLs for each recording
+        // Generate URLs for each recording
         const recordingsWithUrls = await Promise.all(
             recordings.map(async (recording) => {
                 if (recording.storageKey && recording.status === 'ready') {
                     try {
-                        recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
+                        // Use proxy URL for HLS, signed URL for regular video
+                        if (recording.playbackFormat === 'hls') {
+                            recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
+                        } else {
+                            recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
+                        }
                     } catch (err) {
-                        logger.warn('Failed to generate signed URL', { recordingId: recording._id, error: err.message });
+                        logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
                     }
                 }
                 if (recording.thumbnailKey) {
@@ -111,12 +116,17 @@ router.get('/:id', async (req, res, next) => {
             });
         }
 
-        // Generate signed URLs
+        // Generate URLs
         if (recording.storageKey && recording.status === 'ready') {
             try {
-                recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
+                // Use proxy URL for HLS, signed URL for regular video
+                if (recording.playbackFormat === 'hls') {
+                    recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
+                } else {
+                    recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
+                }
             } catch (err) {
-                logger.warn('Failed to generate signed URL', { recordingId: recording._id, error: err.message });
+                logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
             }
         }
         if (recording.thumbnailKey) {
@@ -153,6 +163,21 @@ router.post('/', async (req, res, next) => {
             });
         }
 
+        // Validate playbackFormat
+        if (!data.playbackFormat || !['video', 'hls'].includes(data.playbackFormat)) {
+            return res.status(422).json({
+                errors: [
+                    {
+                        status: '422',
+                        code: 'VALIDATION_ERROR',
+                        title: 'Invalid Attribute',
+                        detail: "playbackFormat is required and must be 'video' or 'hls'",
+                        source: { pointer: '/data/attributes/playbackFormat' },
+                    },
+                ],
+            });
+        }
+
         // Set defaults
         const recordingData = {
             title: data.title || `Recording ${new Date().toLocaleString()}`,
@@ -164,6 +189,7 @@ router.post('/', async (req, res, next) => {
             fileBytes: data.fileBytes || 0,
             sessionInfo: data.sessionInfo || {},
             storageProvider: process.env.STORAGE_PROVIDER || 'gcp',
+            playbackFormat: data.playbackFormat,
             status: 'uploading',
             recordedAt: new Date(),
         };

@@ -120,6 +120,27 @@ export const fileExists = async (bucket, key) => {
 };
 
 /**
+ * Download a file from GCP Cloud Storage as a buffer
+ * Used for proxying HLS content
+ */
+export const downloadFile = async (bucket, key) => {
+    const storage = getStorage();
+    const file = storage.bucket(bucket).file(key);
+    const [contents] = await file.download();
+    return contents;
+};
+
+/**
+ * Create a read stream for a file in GCP Cloud Storage
+ * Used for streaming large files
+ */
+export const createReadStream = (bucket, key) => {
+    const storage = getStorage();
+    const file = storage.bucket(bucket).file(key);
+    return file.createReadStream();
+};
+
+/**
  * Upload a local file to GCP Cloud Storage
  * Used for HLS segments and manifests
  */

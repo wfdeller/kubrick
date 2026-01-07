@@ -109,7 +109,7 @@ const App = () => {
 
     return (
         <div className='app-container'>
-            <Header title='Kubrick' />
+            <Header title='CBP Common Video Recorder' />
             <main className='app-main'>
                 <Tabs
                     activeKey={activeTab}

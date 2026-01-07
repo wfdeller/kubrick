@@ -174,6 +174,39 @@ export const fileExists = async (bucket, key) => {
 };
 
 /**
+ * Download a file from AWS S3 as a buffer
+ * Used for proxying HLS content
+ */
+export const downloadFile = async (bucket, key) => {
+    const client = getS3Client();
+    const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+    });
+    const response = await client.send(command);
+    // Convert readable stream to buffer
+    const chunks = [];
+    for await (const chunk of response.Body) {
+        chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+};
+
+/**
+ * Create a read stream for a file in AWS S3
+ * Used for streaming large files
+ */
+export const createReadStream = async (bucket, key) => {
+    const client = getS3Client();
+    const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+    });
+    const response = await client.send(command);
+    return response.Body;
+};
+
+/**
  * Upload a local file to AWS S3
  * Used for HLS segments and manifests
  */
