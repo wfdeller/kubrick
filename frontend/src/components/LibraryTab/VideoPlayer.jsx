@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Descriptions, Tag } from 'antd';
+import { Descriptions, Tag, Collapse } from 'antd';
 import HLSPlayer from '../common/HLSPlayer';
 
 const formatDuration = (seconds) => {
@@ -59,47 +59,89 @@ const VideoPlayer = ({ recording }) => {
             <div className='player-info'>
                 <h2 className='player-title'>{attributes.title || 'Untitled Recording'}</h2>
 
-                <Descriptions column={2} size='small' className='player-details'>
-                    <Descriptions.Item label='Recorder'>{attributes.recorderName}</Descriptions.Item>
-                    <Descriptions.Item label='Duration'>{formatDuration(attributes.duration)}</Descriptions.Item>
-                    <Descriptions.Item label='Quality'>
-                        <Tag>{attributes.quality}</Tag>
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Size'>{formatBytes(attributes.fileBytes)}</Descriptions.Item>
-                    <Descriptions.Item label='Recorded'>
-                        {formatDate(attributes.recordedAt || attributes.createdAt)}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Status'>
-                        <Tag color={attributes.status === 'ready' ? 'success' : 'default'}>{attributes.status}</Tag>
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Format'>
-                        <Tag color={attributes.playbackFormat === 'hls' ? 'blue' : 'default'}>
-                            {attributes.playbackFormat === 'hls' ? 'HLS (Live)' : 'Video'}
-                        </Tag>
-                    </Descriptions.Item>
-                </Descriptions>
-
-                {attributes.sessionInfo && (
-                    <div className='session-info'>
-                        <h4>Session Info</h4>
-                        <Descriptions column={2} size='small'>
-                            <Descriptions.Item label='Browser'>
-                                {attributes.sessionInfo.browserName} {attributes.sessionInfo.browserVersion}
-                            </Descriptions.Item>
-                            <Descriptions.Item label='OS'>
-                                {attributes.sessionInfo.osName} {attributes.sessionInfo.osVersion}
-                            </Descriptions.Item>
-                            <Descriptions.Item label='Timezone'>{attributes.sessionInfo.timezone}</Descriptions.Item>
-                            <Descriptions.Item label='IP Address'>
-                                {attributes.sessionInfo.ipAddress || 'N/A'}
-                            </Descriptions.Item>
-                            <Descriptions.Item label='Screen'>
-                                {attributes.sessionInfo.screenResolution}
-                            </Descriptions.Item>
-                            <Descriptions.Item label='Language'>{attributes.sessionInfo.language}</Descriptions.Item>
-                        </Descriptions>
-                    </div>
-                )}
+                <Collapse
+                    defaultActiveKey={['metadata']}
+                    size='small'
+                    className='player-collapse'
+                    items={[
+                        {
+                            key: 'metadata',
+                            label: 'Recording Metadata',
+                            children: (
+                                <Descriptions column={2} size='small'>
+                                    <Descriptions.Item label='Recorder'>
+                                        {attributes.recorderName || 'N/A'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Location'>
+                                        {attributes.metadata?.Location || 'N/A'}
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            ),
+                        },
+                        {
+                            key: 'details',
+                            label: 'Recording Details',
+                            children: (
+                                <Descriptions column={2} size='small'>
+                                    <Descriptions.Item label='Duration'>
+                                        {formatDuration(attributes.duration)}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Quality'>
+                                        <Tag>{attributes.quality || 'N/A'}</Tag>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Size'>
+                                        {formatBytes(attributes.fileBytes)}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Recorded'>
+                                        {formatDate(attributes.recordedAt || attributes.createdAt)}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Status'>
+                                        <Tag color={attributes.status === 'ready' ? 'success' : 'default'}>
+                                            {attributes.status || 'N/A'}
+                                        </Tag>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Format'>
+                                        <Tag color={attributes.playbackFormat === 'hls' ? 'blue' : 'default'}>
+                                            {attributes.playbackFormat === 'hls' ? 'HLS (Live)' : 'Video'}
+                                        </Tag>
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            ),
+                        },
+                        ...(attributes.sessionInfo
+                            ? [
+                                  {
+                                      key: 'session',
+                                      label: 'Session Info',
+                                      children: (
+                                          <Descriptions column={2} size='small'>
+                                              <Descriptions.Item label='Browser'>
+                                                  {attributes.sessionInfo.browserName || 'N/A'}{' '}
+                                                  {attributes.sessionInfo.browserVersion || ''}
+                                              </Descriptions.Item>
+                                              <Descriptions.Item label='OS'>
+                                                  {attributes.sessionInfo.osName || 'N/A'}{' '}
+                                                  {attributes.sessionInfo.osVersion || ''}
+                                              </Descriptions.Item>
+                                              <Descriptions.Item label='Timezone'>
+                                                  {attributes.sessionInfo.timezone || 'N/A'}
+                                              </Descriptions.Item>
+                                              <Descriptions.Item label='IP Address'>
+                                                  {attributes.sessionInfo.ipAddress || 'N/A'}
+                                              </Descriptions.Item>
+                                              <Descriptions.Item label='Screen'>
+                                                  {attributes.sessionInfo.screenResolution || 'N/A'}
+                                              </Descriptions.Item>
+                                              <Descriptions.Item label='Language'>
+                                                  {attributes.sessionInfo.language || 'N/A'}
+                                              </Descriptions.Item>
+                                          </Descriptions>
+                                      ),
+                                  },
+                              ]
+                            : []),
+                    ]}
+                />
             </div>
         </div>
     );
@@ -119,6 +161,7 @@ VideoPlayer.propTypes = {
             recordedAt: PropTypes.string,
             videoUrl: PropTypes.string,
             playbackFormat: PropTypes.oneOf(['video', 'hls']),
+            metadata: PropTypes.object,
             sessionInfo: PropTypes.shape({
                 browserName: PropTypes.string,
                 browserVersion: PropTypes.string,
