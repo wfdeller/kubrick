@@ -7,6 +7,7 @@ const Header = ({ title = 'Kubrick' }) => {
             <div className='header-logo'>
                 <span className='header-title'>{title}</span>
             </div>
+            <span className='header-version'>v{__APP_VERSION__}</span>
         </header>
     );
 };

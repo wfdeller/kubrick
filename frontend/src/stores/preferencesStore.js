@@ -3,20 +3,18 @@ import { persist } from 'zustand/middleware';
 
 export const usePreferencesStore = create(
     persist(
-        (set) => ({
+        (set, get) => ({
             recorderName: '',
-            eventId: '',
-            civId: '',
-            aNumber: '',
+            metadata: {},
             defaultQuality: '720p',
 
             setRecorderName: (name) => set({ recorderName: name }),
-            setEventId: (eventId) => set({ eventId }),
-            setCivId: (civId) => set({ civId }),
-            setANumber: (aNumber) => set({ aNumber }),
+            setMetadata: (metadata) => set({ metadata }),
+            setMetadataField: (key, value) => set({ metadata: { ...get().metadata, [key]: value } }),
+            clearMetadata: () => set({ metadata: {} }),
             setDefaultQuality: (quality) => set({ defaultQuality: quality }),
 
-            reset: () => set({ recorderName: '', eventId: '', civId: '', aNumber: '', defaultQuality: '720p' }),
+            reset: () => set({ recorderName: '', metadata: {}, defaultQuality: '720p' }),
         }),
         {
             name: 'kubrick-preferences',

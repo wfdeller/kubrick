@@ -7,9 +7,7 @@ export const RecordingSerializer = new Serializer('recordings', {
         'title',
         'description',
         'recorderName',
-        'eventId',
-        'civId',
-        'aNumber',
+        'metadata',
         'storageProvider',
         'duration',
         'fileBytes',
@@ -28,9 +26,14 @@ export const RecordingSerializer = new Serializer('recordings', {
     transform: (record) => {
         // Convert Mongoose document to plain object
         const obj = record.toObject ? record.toObject() : record;
+        // Convert Mongoose Map to plain object
+        const metadata = obj.metadata instanceof Map
+            ? Object.fromEntries(obj.metadata)
+            : obj.metadata || {};
         return {
             ...obj,
             id: obj._id?.toString() || obj.id,
+            metadata,
         };
     },
 });

@@ -43,18 +43,10 @@ const RecordingSchema = new Schema(
             trim: true,
             index: true,
         },
-        eventId: {
-            type: String,
-            trim: true,
-            index: true,
-        },
-        civId: {
-            type: Number,
-            index: true,
-        },
-        aNumber: {
-            type: Number,
-            index: true,
+        // Flexible metadata (varies per deployment)
+        metadata: {
+            type: Map,
+            of: Schema.Types.Mixed,
         },
 
         // Video storage

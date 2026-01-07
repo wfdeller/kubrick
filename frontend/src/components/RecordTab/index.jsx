@@ -56,12 +56,10 @@ const RecordTab = () => {
         setDefaultQuality,
         recorderName,
         setRecorderName,
-        eventId,
-        setEventId,
-        civId,
-        setCivId,
-        aNumber,
-        setANumber,
+        metadata,
+        setMetadata,
+        setMetadataField,
+        clearMetadata,
     } = usePreferencesStore();
     const {
         status,
@@ -78,18 +76,21 @@ const RecordTab = () => {
     const { sessionInfo } = useSessionInfo();
 
     // Pre-populate metadata from URL parameters
+    // recorderName persists across sessions, metadata resets each visit
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
 
         const urlRecorderName = params.get('recorderName') || params.get('name');
-        const urlEventId = params.get('eventId') || params.get('event');
-        const urlCivId = params.get('civId') || params.get('civ');
-        const urlANumber = params.get('aNumber') || params.get('a');
-
         if (urlRecorderName) setRecorderName(urlRecorderName);
-        if (urlEventId) setEventId(urlEventId);
-        if (urlCivId) setCivId(urlCivId);
-        if (urlANumber) setANumber(urlANumber);
+
+        // Build metadata from URL params (excluding recorderName/name)
+        const urlMetadata = {};
+        for (const [key, value] of params.entries()) {
+            if (key !== 'recorderName' && key !== 'name') {
+                urlMetadata[key] = value;
+            }
+        }
+        setMetadata(urlMetadata);
     }, []);
 
     const {
@@ -181,9 +182,7 @@ const RecordTab = () => {
                     attributes: {
                         title: title.trim() || `Recording ${new Date().toLocaleString()}`,
                         recorderName: recorderName,
-                        eventId: eventId.trim() || null,
-                        civId: civId ? parseInt(civId, 10) : null,
-                        aNumber: aNumber ? parseInt(aNumber, 10) : null,
+                        metadata: metadata,
                         quality: defaultQuality,
                         mimeType: blob.type,
                         fileBytes: blob.size,
@@ -337,35 +336,17 @@ const RecordTab = () => {
                                     disabled={isRecording || isUploading}
                                 />
                             </div>
-                            <div className='metadata-field'>
-                                <label>Event ID</label>
-                                <Input
-                                    placeholder='Event ID'
-                                    value={eventId}
-                                    onChange={(e) => setEventId(e.target.value)}
-                                    disabled={isRecording || isUploading}
-                                />
-                            </div>
-                            <div className='metadata-field'>
-                                <label>CivID</label>
-                                <Input
-                                    type='number'
-                                    placeholder='CivID'
-                                    value={civId}
-                                    onChange={(e) => setCivId(e.target.value)}
-                                    disabled={isRecording || isUploading}
-                                />
-                            </div>
-                            <div className='metadata-field'>
-                                <label>A#</label>
-                                <Input
-                                    type='number'
-                                    placeholder='A#'
-                                    value={aNumber}
-                                    onChange={(e) => setANumber(e.target.value)}
-                                    disabled={isRecording || isUploading}
-                                />
-                            </div>
+                            {Object.entries(metadata).map(([key, value]) => (
+                                <div className='metadata-field' key={key}>
+                                    <label>{key}</label>
+                                    <Input
+                                        placeholder={key}
+                                        value={value}
+                                        onChange={(e) => setMetadataField(key, e.target.value)}
+                                        disabled={isRecording || isUploading}
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </Card>
                 </div>

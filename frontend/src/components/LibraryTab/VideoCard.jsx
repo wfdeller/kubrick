@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { Card, Tag, Popconfirm } from 'antd';
-import { PlayCircleOutlined, InboxOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined, DeleteOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons';
 
 const formatDuration = (seconds) => {
     if (!seconds) return '00:00';
@@ -73,7 +73,7 @@ const VideoCard = ({ recording, onPlay, onArchive = null }) => {
                                 okText='Archive'
                                 cancelText='Cancel'
                             >
-                                <InboxOutlined className='archive-icon' />
+                                <DeleteOutlined className='archive-icon' />
                             </Popconfirm>
                         </div>
                     </div>

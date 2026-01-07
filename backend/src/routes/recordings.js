@@ -158,6 +158,7 @@ router.post('/', async (req, res, next) => {
             title: data.title || `Recording ${new Date().toLocaleString()}`,
             description: data.description || '',
             recorderName: data.recorderName,
+            metadata: data.metadata || {},
             quality: data.quality || '720p',
             mimeType: data.mimeType || 'video/webm',
             fileBytes: data.fileBytes || 0,

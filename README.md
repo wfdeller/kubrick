@@ -4,35 +4,38 @@ A web application for recording interview videos, storing them in cloud storage 
 
 ## Features
 
-- **Video Recording**: Browser-based video recording using MediaRecorder API
-- **Chunked Uploads**: Resumable uploads for large video files (hour+ recordings)
-- **Cloud Storage**: Support for GCP Cloud Storage (primary) and AWS S3
-- **Session Metadata**: Automatic capture of browser, OS, timezone, IP address, and device info
-- **Recording Library**: Browse, search, and playback recorded videos
-- **Responsive Design**: Works on desktop and tablet devices
-- **URL Pre-population**: Pre-fill recording metadata via URL parameters
+-   **Video Recording**: Browser-based video recording using MediaRecorder API
+-   **Chunked Uploads**: Resumable uploads for large video files (hour+ recordings)
+-   **Cloud Storage**: Support for GCP Cloud Storage (primary) and AWS S3
+-   **Session Metadata**: Automatic capture of browser, OS, timezone, IP address, and device info
+-   **Recording Library**: Browse, search, and playback recorded videos
+-   **Responsive Design**: Works on desktop and tablet devices
+-   **URL Pre-population**: Pre-fill recording metadata via URL parameters
 
 ## Tech Stack
 
 ### Frontend
-- React 18 with Vite
-- Ant Design UI components
-- Zustand for state management (with localStorage persistence)
-- TanStack Query for server state
-- MediaRecorder API for video capture
+
+-   React 18 with Vite
+-   Ant Design UI components
+-   Zustand for state management (with localStorage persistence)
+-   TanStack Query for server state
+-   MediaRecorder API for video capture
 
 ### Backend
-- Node.js + Express
-- MongoDB with Mongoose ODM
-- GCP Cloud Storage / AWS S3
-- JSON:API specification for REST endpoints
+
+-   Node.js + Express
+-   MongoDB with Mongoose ODM
+-   GCP Cloud Storage / AWS S3
+-   JSON:API specification for REST endpoints
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- MongoDB (local or Atlas)
-- GCP Cloud Storage bucket (or AWS S3)
+
+-   Node.js 18+
+-   MongoDB (local or Atlas)
+-   GCP Cloud Storage bucket (or AWS S3)
 
 ### Installation
 
@@ -104,14 +107,15 @@ Access the application at `http://localhost:5173`
 
 Pre-populate recording metadata via URL parameters:
 
-| Field | Parameters |
-|-------|------------|
+| Field         | Parameters               |
+| ------------- | ------------------------ |
 | Recorder Name | `recorderName` or `name` |
-| Event ID | `eventId` or `event` |
-| CivID | `civId` or `civ` |
-| A# | `aNumber` or `a` |
+| Event ID      | `eventId` or `event`     |
+| CivID         | `civId` or `civ`         |
+| A#            | `aNumber` or `a`         |
 
 Example:
+
 ```
 http://localhost:5173/?name=John%20Doe&eventId=EVT-123&civId=456&aNumber=789
 ```
@@ -122,28 +126,28 @@ All endpoints follow the JSON:API v1.1 specification.
 
 ### Recordings
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/recordings` | List recordings (with pagination) |
-| GET | `/api/recordings/:id` | Get single recording |
-| POST | `/api/recordings` | Create recording metadata |
-| PATCH | `/api/recordings/:id` | Update recording |
-| DELETE | `/api/recordings/:id` | Delete recording |
+| Method | Endpoint              | Description                       |
+| ------ | --------------------- | --------------------------------- |
+| GET    | `/api/recordings`     | List recordings (with pagination) |
+| GET    | `/api/recordings/:id` | Get single recording              |
+| POST   | `/api/recordings`     | Create recording metadata         |
+| PATCH  | `/api/recordings/:id` | Update recording                  |
+| DELETE | `/api/recordings/:id` | Delete recording                  |
 
 ### Upload
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/upload/init-chunked` | Initialize chunked upload |
-| POST | `/api/upload/chunk-url` | Get presigned URL for chunk |
-| POST | `/api/upload/complete-chunked` | Complete chunked upload |
-| POST | `/api/upload/abort-chunked` | Abort chunked upload |
+| Method | Endpoint                       | Description                 |
+| ------ | ------------------------------ | --------------------------- |
+| POST   | `/api/upload/init-chunked`     | Initialize chunked upload   |
+| POST   | `/api/upload/chunk-url`        | Get presigned URL for chunk |
+| POST   | `/api/upload/complete-chunked` | Complete chunked upload     |
+| POST   | `/api/upload/abort-chunked`    | Abort chunked upload        |
 
 ### Session
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/session-info` | Get client IP address |
+| Method | Endpoint            | Description           |
+| ------ | ------------------- | --------------------- |
+| GET    | `/api/session-info` | Get client IP address |
 
 ## Project Structure
 
