@@ -45,11 +45,25 @@ router.get('/:recordingId/hls/manifest.m3u8', async (req, res, next) => {
         const manifestKey = recording.storageKey || `streams/${recordingId}/stream.m3u8`;
         const bucket = recording.storageBucket || process.env.GCP_BUCKET_NAME || 'kubrick-videos';
 
-        const manifestContent = await downloadFile(bucket, manifestKey);
-
-        res.set('Content-Type', 'application/vnd.apple.mpegurl');
-        res.set('Cache-Control', 'no-cache');
-        res.send(manifestContent);
+        try {
+            const manifestContent = await downloadFile(bucket, manifestKey);
+            res.set('Content-Type', 'application/vnd.apple.mpegurl');
+            res.set('Cache-Control', 'no-cache');
+            res.send(manifestContent);
+        } catch (downloadErr) {
+            // If manifest not found and stream is still recording, it may not be ready yet
+            if (recording.status === 'recording') {
+                logger.info('HLS manifest not ready yet (stream initializing)', { recordingId });
+                return res.status(503).json({
+                    errors: [{
+                        status: '503',
+                        code: 'STREAM_INITIALIZING',
+                        title: 'Stream is initializing, please retry in a moment',
+                    }],
+                });
+            }
+            throw downloadErr;
+        }
     } catch (err) {
         logger.error('Failed to proxy HLS manifest', { recordingId: req.params.recordingId, error: err.message });
         next(err);

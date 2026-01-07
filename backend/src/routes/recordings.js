@@ -48,17 +48,16 @@ router.get('/', async (req, res, next) => {
         // Generate URLs for each recording
         const recordingsWithUrls = await Promise.all(
             recordings.map(async (recording) => {
-                if (recording.storageKey && recording.status === 'ready') {
-                    try {
-                        // Use proxy URL for HLS, signed URL for regular video
-                        if (recording.playbackFormat === 'hls') {
-                            recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
-                        } else {
-                            recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
-                        }
-                    } catch (err) {
-                        logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
+                try {
+                    // HLS streams can be played while recording (live) or when ready
+                    if (recording.playbackFormat === 'hls' && (recording.status === 'recording' || recording.status === 'ready')) {
+                        recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
+                    } else if (recording.storageKey && recording.status === 'ready') {
+                        // Regular video - only when ready and has storage key
+                        recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
                     }
+                } catch (err) {
+                    logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
                 }
                 if (recording.thumbnailKey) {
                     try {
@@ -117,17 +116,16 @@ router.get('/:id', async (req, res, next) => {
         }
 
         // Generate URLs
-        if (recording.storageKey && recording.status === 'ready') {
-            try {
-                // Use proxy URL for HLS, signed URL for regular video
-                if (recording.playbackFormat === 'hls') {
-                    recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
-                } else {
-                    recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
-                }
-            } catch (err) {
-                logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
+        try {
+            // HLS streams can be played while recording (live) or when ready
+            if (recording.playbackFormat === 'hls' && (recording.status === 'recording' || recording.status === 'ready')) {
+                recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
+            } else if (recording.storageKey && recording.status === 'ready') {
+                // Regular video - only when ready and has storage key
+                recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
             }
+        } catch (err) {
+            logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
         }
         if (recording.thumbnailKey) {
             try {

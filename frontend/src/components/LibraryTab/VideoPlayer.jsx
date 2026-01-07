@@ -51,6 +51,7 @@ const VideoPlayer = ({ recording }) => {
                     <HLSPlayer
                         src={attributes.videoUrl}
                         autoPlay
+                        isLive={attributes.status === 'recording'}
                     />
                 ) : (
                     <video ref={videoRef} controls autoPlay className='player-video' src={attributes.videoUrl}>
