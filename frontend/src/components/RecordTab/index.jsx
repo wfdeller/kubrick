@@ -389,6 +389,31 @@ const RecordTab = () => {
             <div className='record-main'>
                 <div className='record-top-row'>
                     <div className='record-video-section'>
+                        <div className='video-header'>
+                            {isLiveStreamingEnabled && (
+                                <div className='live-stream-toggle'>
+                                    <Switch
+                                        checked={liveStreamEnabled}
+                                        onChange={setLiveStreamEnabled}
+                                        disabled={isRecording || isUploading}
+                                        size='small'
+                                    />
+                                    <span className={`live-stream-label ${liveStreamEnabled ? 'live-enabled' : ''}`}>
+                                        <WifiOutlined style={{ marginRight: 4 }} />
+                                        {liveStreamEnabled ? 'Live Streaming Enabled' : 'Live Streaming Disabled'}
+                                    </span>
+                                </div>
+                            )}
+                            <Select
+                                value={defaultQuality}
+                                onChange={setDefaultQuality}
+                                options={QUALITY_OPTIONS}
+                                disabled={isRecording || isUploading}
+                                className='quality-select'
+                                size='small'
+                            />
+                        </div>
+
                         <CameraPreview ref={cameraRef} stream={stream} isRecording={isRecording} />
 
                         {mediaError && (
@@ -432,173 +457,131 @@ const RecordTab = () => {
                                         <span className='upload-chunks'>
                                             Chunk {uploadedChunks} of {totalChunks}
                                         </span>
-                                        {currentSpeed > 0 && (
-                                            <span className='upload-speed'>{currentSpeed} KB/s</span>
-                                        )}
+                                        {currentSpeed > 0 && <span className='upload-speed'>{currentSpeed} KB/s</span>}
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <Card
-                        title={
-                            <span>
-                                <FormOutlined style={{ marginRight: 8 }} />
-                                Recording Metadata
-                            </span>
-                        }
-                        size='small'
-                        className='metadata-card'
-                    >
-                        <div className='metadata-fields'>
-                            <div className='metadata-field'>
-                                <label>Your Name *</label>
-                                <Input
-                                    prefix={<UserOutlined />}
-                                    placeholder='Enter your name'
-                                    value={recorderName}
-                                    onChange={(e) => setRecorderName(e.target.value)}
-                                    disabled={isRecording || isUploading}
-                                />
-                            </div>
-                            {Object.entries(metadata).map(([key, value]) => {
-                                const isNumeric = key === 'civId' || key === 'aNumber';
-                                return (
-                                    <div className='metadata-field' key={key}>
-                                        <label>{key}</label>
-                                        <Input
-                                            type={isNumeric ? 'number' : 'text'}
-                                            placeholder={key}
-                                            value={value}
-                                            onChange={(e) => setMetadataField(key, e.target.value)}
-                                            disabled={isRecording || isUploading}
-                                        />
-                                    </div>
-                                );
-                            })}
+                    <div className='metadata-section'>
+                        <div className='metadata-header'>
+                            {isIdle && (
+                                <Button
+                                    type='primary'
+                                    icon={<VideoCameraOutlined />}
+                                    onClick={handleStartRecording}
+                                    disabled={isUploading || (liveStreamEnabled && !wsConnected)}
+                                    className='record-button'
+                                >
+                                    Start Recording
+                                </Button>
+                            )}
+                            {isRecording && !isPaused && (
+                                <div className='recording-buttons'>
+                                    <Button
+                                        icon={<PauseCircleOutlined />}
+                                        onClick={pauseRecording}
+                                        className='pause-button'
+                                    >
+                                        Pause
+                                    </Button>
+                                    <Button
+                                        type='primary'
+                                        danger
+                                        icon={<StopOutlined />}
+                                        onClick={handleStopRecording}
+                                        className='stop-button'
+                                    >
+                                        Stop
+                                    </Button>
+                                </div>
+                            )}
+                            {isRecording && isPaused && (
+                                <div className='recording-buttons'>
+                                    <Button
+                                        type='primary'
+                                        icon={<PlayCircleOutlined />}
+                                        onClick={resumeRecording}
+                                        className='resume-button'
+                                    >
+                                        Resume
+                                    </Button>
+                                    <Button
+                                        type='primary'
+                                        danger
+                                        icon={<StopOutlined />}
+                                        onClick={handleStopRecording}
+                                        className='stop-button'
+                                    >
+                                        Stop
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                    </Card>
+                        <Card
+                            title={
+                                <span>
+                                    <FormOutlined style={{ marginRight: 8 }} />
+                                    Recording Metadata
+                                </span>
+                            }
+                            size='small'
+                            className='metadata-card'
+                        >
+                            <div className='metadata-fields'>
+                                <div className='metadata-field'>
+                                    <label>Title (optional)</label>
+                                    <Input
+                                        placeholder='Recording title'
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        disabled={isRecording || isUploading}
+                                    />
+                                </div>
+                                <div className='metadata-field'>
+                                    <label>Your Name *</label>
+                                    <Input
+                                        prefix={<UserOutlined />}
+                                        placeholder='Enter your name'
+                                        value={recorderName}
+                                        onChange={(e) => setRecorderName(e.target.value)}
+                                        disabled={isRecording || isUploading}
+                                    />
+                                </div>
+                                {Object.entries(metadata).map(([key, value]) => {
+                                    const isNumeric = key === 'civId' || key === 'aNumber';
+                                    return (
+                                        <div className='metadata-field' key={key}>
+                                            <label>{key}</label>
+                                            <Input
+                                                type={isNumeric ? 'number' : 'text'}
+                                                placeholder={key}
+                                                value={value}
+                                                onChange={(e) => setMetadataField(key, e.target.value)}
+                                                disabled={isRecording || isUploading}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+                    </div>
                 </div>
             </div>
 
-            <div className='record-controls'>
-                {isIdle && (
-                    <div className='record-controls-row'>
-                        <Select
-                            value={defaultQuality}
-                            onChange={setDefaultQuality}
-                            options={QUALITY_OPTIONS}
-                            disabled={isUploading}
-                            className='quality-select'
-                            size='large'
-                        />
-                        {isLiveStreamingEnabled && (
-                            <Tooltip title='Enable live streaming to allow others to watch in real-time'>
-                                <div className='live-stream-toggle'>
-                                    <Switch
-                                        checked={liveStreamEnabled}
-                                        onChange={setLiveStreamEnabled}
-                                        disabled={isUploading}
-                                    />
-                                    <span className='live-stream-label'>
-                                        <WifiOutlined style={{ marginRight: 4 }} />
-                                        Live
-                                    </span>
-                                    {liveStreamEnabled && (
-                                        <Tag color={wsConnected ? 'green' : 'orange'} style={{ marginLeft: 8 }}>
-                                            {wsConnected ? 'Ready' : 'Connecting...'}
-                                        </Tag>
-                                    )}
-                                </div>
-                            </Tooltip>
-                        )}
-                        <Input
-                            placeholder='Recording title (optional)'
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            disabled={isUploading}
-                            className='title-input'
-                            size='large'
-                        />
-                        <Button
-                            type='primary'
-                            size='large'
-                            icon={<VideoCameraOutlined />}
-                            onClick={handleStartRecording}
-                            disabled={isUploading || (liveStreamEnabled && !wsConnected)}
-                            className='record-button'
-                        >
-                            Start Recording
-                        </Button>
-                    </div>
-                )}
-
-                {isRecording && (
-                    <div className='record-controls-row'>
-                        {!isPaused ? (
-                            <>
-                                <Button
-                                    size='large'
-                                    icon={<PauseCircleOutlined />}
-                                    onClick={pauseRecording}
-                                    className='pause-button'
-                                >
-                                    Pause
-                                </Button>
-                                <Button
-                                    type='primary'
-                                    danger
-                                    size='large'
-                                    icon={<StopOutlined />}
-                                    onClick={handleStopRecording}
-                                    className='stop-button'
-                                >
-                                    Stop Recording
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Button
-                                    type='primary'
-                                    size='large'
-                                    icon={<PlayCircleOutlined />}
-                                    onClick={resumeRecording}
-                                    className='resume-button'
-                                >
-                                    Resume
-                                </Button>
-                                <Button
-                                    type='primary'
-                                    danger
-                                    size='large'
-                                    icon={<StopOutlined />}
-                                    onClick={handleStopRecording}
-                                    className='stop-button'
-                                >
-                                    Stop Recording
-                                </Button>
-                            </>
-                        )}
-                    </div>
-                )}
-
-                {isUploading && (
+            {isUploading && (
+                <div className='record-controls'>
                     <div className='record-controls-row'>
                         <Button size='large' loading disabled>
                             Uploading... {uploadProgress}%
                         </Button>
-                        <Button
-                            size='large'
-                            danger
-                            icon={<CloseCircleOutlined />}
-                            onClick={handleCancelUpload}
-                        >
+                        <Button size='large' danger icon={<CloseCircleOutlined />} onClick={handleCancelUpload}>
                             Cancel
                         </Button>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };

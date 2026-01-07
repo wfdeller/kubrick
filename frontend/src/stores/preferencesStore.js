@@ -6,7 +6,7 @@ export const usePreferencesStore = create(
         (set, get) => ({
             recorderName: '',
             metadata: {},
-            defaultQuality: '720p',
+            defaultQuality: '480p',
 
             setRecorderName: (name) => set({ recorderName: name }),
             setMetadata: (metadata) => set({ metadata }),
@@ -14,7 +14,7 @@ export const usePreferencesStore = create(
             clearMetadata: () => set({ metadata: {} }),
             setDefaultQuality: (quality) => set({ defaultQuality: quality }),
 
-            reset: () => set({ recorderName: '', metadata: {}, defaultQuality: '720p' }),
+            reset: () => set({ recorderName: '', metadata: {}, defaultQuality: '480p' }),
         }),
         {
             name: 'kubrick-preferences',

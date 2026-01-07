@@ -48,11 +48,7 @@ const VideoPlayer = ({ recording }) => {
         <div className='video-player'>
             <div className='player-video-container'>
                 {attributes.playbackFormat === 'hls' ? (
-                    <HLSPlayer
-                        src={attributes.videoUrl}
-                        autoPlay
-                        isLive={attributes.status === 'recording'}
-                    />
+                    <HLSPlayer src={attributes.videoUrl} autoPlay isLive={attributes.status === 'recording'} />
                 ) : (
                     <video ref={videoRef} controls autoPlay className='player-video' src={attributes.videoUrl}>
                         Your browser does not support the video tag.
@@ -85,7 +81,7 @@ const VideoPlayer = ({ recording }) => {
 
                 {attributes.sessionInfo && (
                     <div className='session-info'>
-                        <h4>Session Details</h4>
+                        <h4>Session Info</h4>
                         <Descriptions column={2} size='small'>
                             <Descriptions.Item label='Browser'>
                                 {attributes.sessionInfo.browserName} {attributes.sessionInfo.browserVersion}
