@@ -75,6 +75,13 @@ const RecordTab = () => {
 
     const { sessionInfo } = useSessionInfo();
 
+    // Default metadata fields (can be overridden by URL params)
+    const defaultMetadataFields = {
+        eventId: '',
+        civId: '',
+        aNumber: '',
+    };
+
     // Pre-populate metadata from URL parameters
     // recorderName persists across sessions, metadata resets each visit
     useEffect(() => {
@@ -83,8 +90,8 @@ const RecordTab = () => {
         const urlRecorderName = params.get('recorderName') || params.get('name');
         if (urlRecorderName) setRecorderName(urlRecorderName);
 
-        // Build metadata from URL params (excluding recorderName/name)
-        const urlMetadata = {};
+        // Start with default fields, override with URL params
+        const urlMetadata = { ...defaultMetadataFields };
         for (const [key, value] of params.entries()) {
             if (key !== 'recorderName' && key !== 'name') {
                 urlMetadata[key] = value;
@@ -336,17 +343,21 @@ const RecordTab = () => {
                                     disabled={isRecording || isUploading}
                                 />
                             </div>
-                            {Object.entries(metadata).map(([key, value]) => (
-                                <div className='metadata-field' key={key}>
-                                    <label>{key}</label>
-                                    <Input
-                                        placeholder={key}
-                                        value={value}
-                                        onChange={(e) => setMetadataField(key, e.target.value)}
-                                        disabled={isRecording || isUploading}
-                                    />
-                                </div>
-                            ))}
+                            {Object.entries(metadata).map(([key, value]) => {
+                                const isNumeric = key === 'civId' || key === 'aNumber';
+                                return (
+                                    <div className='metadata-field' key={key}>
+                                        <label>{key}</label>
+                                        <Input
+                                            type={isNumeric ? 'number' : 'text'}
+                                            placeholder={key}
+                                            value={value}
+                                            onChange={(e) => setMetadataField(key, e.target.value)}
+                                            disabled={isRecording || isUploading}
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     </Card>
                 </div>
