@@ -25,15 +25,7 @@ const LibraryTab = () => {
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
-    const {
-        data,
-        isLoading,
-        error,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-        refetch,
-    } = useInfiniteQuery({
+    const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useInfiniteQuery({
         queryKey: ['recordings', filterName, sort],
         queryFn: ({ pageParam = 1 }) =>
             fetchRecordings({ recorderName: filterName, sort, page: pageParam, pageSize: PAGE_SIZE }),
@@ -130,11 +122,7 @@ const LibraryTab = () => {
 
                     {hasNextPage && (
                         <div className='load-more-container'>
-                            <Button
-                                onClick={() => fetchNextPage()}
-                                loading={isFetchingNextPage}
-                                size='large'
-                            >
+                            <Button onClick={() => fetchNextPage()} loading={isFetchingNextPage} size='large'>
                                 {isFetchingNextPage ? 'Loading...' : 'Load More'}
                             </Button>
                         </div>
@@ -148,7 +136,7 @@ const LibraryTab = () => {
                 footer={null}
                 width={900}
                 centered
-                destroyOnClose
+                destroyOnHidden
                 className='video-modal'
             >
                 {selectedVideo && <VideoPlayer recording={selectedVideo} />}

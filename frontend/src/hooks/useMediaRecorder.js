@@ -6,7 +6,7 @@ const QUALITY_CONSTRAINTS = {
     '1080p': { width: 1920, height: 1080 },
 };
 
-export const useMediaRecorder = (quality = '720p') => {
+export const useMediaRecorder = (quality = '720p', onChunk = null) => {
     const [stream, setStream] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
@@ -15,6 +15,10 @@ export const useMediaRecorder = (quality = '720p') => {
 
     const mediaRecorderRef = useRef(null);
     const chunksRef = useRef([]);
+    const onChunkRef = useRef(onChunk);
+
+    // Keep onChunk callback updated
+    onChunkRef.current = onChunk;
 
     const constraints = QUALITY_CONSTRAINTS[quality] || QUALITY_CONSTRAINTS['720p'];
 
@@ -71,6 +75,10 @@ export const useMediaRecorder = (quality = '720p') => {
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     chunksRef.current.push(event.data);
+                    // Call onChunk callback for live streaming
+                    if (onChunkRef.current) {
+                        onChunkRef.current(event.data);
+                    }
                 }
             };
 

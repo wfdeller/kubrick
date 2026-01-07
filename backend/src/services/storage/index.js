@@ -116,3 +116,44 @@ export const abortResumableUpload = async (bucket, key, uploadId) => {
 export const getProviderName = () => {
     return process.env.STORAGE_PROVIDER || 'gcp';
 };
+
+// ============================================
+// STREAMING FUNCTIONS
+// ============================================
+
+/**
+ * Upload an HLS segment file to storage
+ * @param {string} bucket - Bucket name
+ * @param {string} key - Storage key for the segment
+ * @param {string} localPath - Local file path to upload
+ */
+export const uploadStreamSegment = async (bucket, key, localPath) => {
+    const provider = getProvider();
+    return provider.uploadFile(bucket, key, localPath, 'video/mp2t');
+};
+
+/**
+ * Upload an HLS manifest file to storage
+ * @param {string} bucket - Bucket name
+ * @param {string} key - Storage key for the manifest
+ * @param {string} localPath - Local file path to upload
+ */
+export const uploadStreamManifest = async (bucket, key, localPath) => {
+    const provider = getProvider();
+    // Set short cache for live manifest
+    return provider.uploadFile(bucket, key, localPath, 'application/vnd.apple.mpegurl', {
+        cacheControl: 'no-cache, no-store, must-revalidate',
+    });
+};
+
+/**
+ * Get a public/signed URL for stream playback
+ * @param {string} bucket - Bucket name
+ * @param {string} key - Manifest key
+ * @returns {Promise<string>} Playback URL
+ */
+export const getStreamPlaybackUrl = async (bucket, key) => {
+    const provider = getProvider();
+    // Long-lived read URL for playback
+    return provider.getSignedUrl(bucket, key, 'read', 'application/vnd.apple.mpegurl');
+};

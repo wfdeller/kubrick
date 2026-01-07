@@ -10,6 +10,7 @@ import {
     GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl as getS3SignedUrl } from '@aws-sdk/s3-request-presigner';
+import fs from 'fs';
 
 let s3Client = null;
 
@@ -170,4 +171,24 @@ export const fileExists = async (bucket, key) => {
         }
         throw err;
     }
+};
+
+/**
+ * Upload a local file to AWS S3
+ * Used for HLS segments and manifests
+ */
+export const uploadFile = async (bucket, key, localPath, contentType = 'application/octet-stream', options = {}) => {
+    const client = getS3Client();
+    const fileContent = fs.readFileSync(localPath);
+
+    const command = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: fileContent,
+        ContentType: contentType,
+        CacheControl: options.cacheControl || 'public, max-age=31536000',
+    });
+
+    await client.send(command);
+    return { bucket, key };
 };

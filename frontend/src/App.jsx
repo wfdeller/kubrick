@@ -4,13 +4,16 @@ import { InfoCircleOutlined, GlobalOutlined } from '@ant-design/icons';
 import Header from './components/common/Header';
 import RecordTab from './components/RecordTab';
 import LibraryTab from './components/LibraryTab';
+import StreamsTab from './components/StreamsTab';
 import { useSessionInfo } from './hooks/useSessionInfo';
+import { useFeatureFlags } from './hooks/useFeatureFlags';
 import './styles/components/App.css';
 
 const App = () => {
     const [activeTab, setActiveTab] = useState('record');
     const [sessionModalOpen, setSessionModalOpen] = useState(false);
     const { sessionInfo, loading: sessionLoading } = useSessionInfo();
+    const { isLiveStreamingEnabled } = useFeatureFlags();
 
     const tabItems = [
         {
@@ -23,6 +26,16 @@ const App = () => {
             label: 'Library',
             children: <LibraryTab />,
         },
+        // Only show Streams tab when live streaming is enabled
+        ...(isLiveStreamingEnabled
+            ? [
+                  {
+                      key: 'streams',
+                      label: 'Streams',
+                      children: <StreamsTab />,
+                  },
+              ]
+            : []),
     ];
 
     const sessionInfoButton = (

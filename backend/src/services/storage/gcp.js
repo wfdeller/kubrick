@@ -118,3 +118,22 @@ export const fileExists = async (bucket, key) => {
     const [exists] = await file.exists();
     return exists;
 };
+
+/**
+ * Upload a local file to GCP Cloud Storage
+ * Used for HLS segments and manifests
+ */
+export const uploadFile = async (bucket, key, localPath, contentType = 'application/octet-stream', options = {}) => {
+    const storage = getStorage();
+
+    const uploadOptions = {
+        destination: key,
+        metadata: {
+            contentType,
+            cacheControl: options.cacheControl || 'public, max-age=31536000',
+        },
+    };
+
+    await storage.bucket(bucket).upload(localPath, uploadOptions);
+    return { bucket, key };
+};
