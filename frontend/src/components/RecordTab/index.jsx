@@ -149,19 +149,20 @@ const RecordTab = () => {
         isPaused,
         error: mediaError,
         recordedBlob,
-        initializeStream,
         startRecording: startMediaRecording,
         stopRecording: stopMediaRecording,
         pauseRecording,
         resumeRecording,
+        releaseCamera,
         cleanup,
         clearError,
     } = useMediaRecorder(defaultQuality, liveStreamEnabled ? handleChunk : null);
 
-    // Initialize camera on mount
+    // Cleanup camera on unmount only
+    const cleanupRef = useRef(cleanup);
+    cleanupRef.current = cleanup;
     useEffect(() => {
-        initializeStream();
-        return () => cleanup();
+        return () => cleanupRef.current();
     }, []);
 
     // Connect to WebSocket when live streaming is enabled
@@ -189,6 +190,9 @@ const RecordTab = () => {
     // Skip chunked upload if live streaming was used (content already uploaded as HLS)
     useEffect(() => {
         if (recordedBlob && status === 'stopped') {
+            // Release camera now that recording is complete
+            releaseCamera();
+
             if (liveStreamEnabled && currentRecordingId) {
                 // Live stream already uploaded content - just mark as complete
                 message.success('Live recording complete! Video available in library.');
@@ -520,7 +524,7 @@ const RecordTab = () => {
                             size='large'
                             icon={<VideoCameraOutlined />}
                             onClick={handleStartRecording}
-                            disabled={!stream || isUploading || (liveStreamEnabled && !wsConnected)}
+                            disabled={isUploading || (liveStreamEnabled && !wsConnected)}
                             className='record-button'
                         >
                             Start Recording

@@ -35,7 +35,7 @@ const formatBytes = (bytes) => {
 
 const StreamsTab = () => {
     const { isLiveStreamingEnabled, isLoading: featuresLoading } = useFeatureFlags();
-    const [autoRefresh, setAutoRefresh] = useState(true);
+    const [autoRefresh, setAutoRefresh] = useState(false);
 
     const {
         data: streamStatus,
@@ -176,9 +176,7 @@ const StreamsTab = () => {
                             <div>
                                 <div>Segments: {transcoder.segmentCount}</div>
                                 <div>Received: {formatBytes(transcoder.bytesReceived)}</div>
-                                {transcoder.errors?.length > 0 && (
-                                    <div>Errors: {transcoder.errors.length}</div>
-                                )}
+                                {transcoder.errors?.length > 0 && <div>Errors: {transcoder.errors.length}</div>}
                             </div>
                         }
                     >

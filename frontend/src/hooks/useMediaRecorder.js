@@ -125,11 +125,16 @@ export const useMediaRecorder = (quality = '720p', onChunk = null) => {
         }
     }, []);
 
-    const cleanup = useCallback(() => {
+    // Release camera without clearing recording data
+    const releaseCamera = useCallback(() => {
         if (stream) {
             stream.getTracks().forEach((track) => track.stop());
             setStream(null);
         }
+    }, [stream]);
+
+    const cleanup = useCallback(() => {
+        releaseCamera();
         if (mediaRecorderRef.current) {
             if (mediaRecorderRef.current.state !== 'inactive') {
                 mediaRecorderRef.current.stop();
@@ -140,7 +145,7 @@ export const useMediaRecorder = (quality = '720p', onChunk = null) => {
         setRecordedBlob(null);
         setIsRecording(false);
         setIsPaused(false);
-    }, [stream]);
+    }, [releaseCamera]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -162,6 +167,7 @@ export const useMediaRecorder = (quality = '720p', onChunk = null) => {
         stopRecording,
         pauseRecording,
         resumeRecording,
+        releaseCamera,
         cleanup,
         clearError: () => setError(null),
     };

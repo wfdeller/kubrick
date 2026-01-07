@@ -33,7 +33,7 @@ const CameraPreview = forwardRef(({ stream = null, isRecording = false }, ref) =
         return (
             <div className='camera-preview camera-preview-placeholder'>
                 <VideoCameraOutlined className='placeholder-icon' />
-                <p>Waiting for camera access...</p>
+                <p>Camera will activate when recording starts</p>
             </div>
         );
     }

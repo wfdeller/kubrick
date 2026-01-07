@@ -75,6 +75,11 @@ const VideoPlayer = ({ recording }) => {
                     <Descriptions.Item label='Status'>
                         <Tag color={attributes.status === 'ready' ? 'success' : 'default'}>{attributes.status}</Tag>
                     </Descriptions.Item>
+                    <Descriptions.Item label='Format'>
+                        <Tag color={attributes.playbackFormat === 'hls' ? 'blue' : 'default'}>
+                            {attributes.playbackFormat === 'hls' ? 'HLS (Live)' : 'Video'}
+                        </Tag>
+                    </Descriptions.Item>
                 </Descriptions>
 
                 {attributes.sessionInfo && (
