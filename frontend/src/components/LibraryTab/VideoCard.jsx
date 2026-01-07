@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { Card, Tag, Popconfirm } from 'antd';
-import { PlayCircleOutlined, DeleteOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined, DeleteOutlined, ClockCircleOutlined, UserOutlined, WifiOutlined } from '@ant-design/icons';
 
 const formatDuration = (seconds) => {
     if (!seconds) return '00:00';
@@ -47,6 +47,11 @@ const VideoCard = ({ recording, onPlay, onArchive = null }) => {
                     <div className='thumbnail-overlay'>
                         <PlayCircleOutlined className='play-icon' />
                     </div>
+                    {attributes.status === 'recording' && attributes.playbackFormat === 'hls' && (
+                        <span className='live-badge'>
+                            <WifiOutlined /> LIVE
+                        </span>
+                    )}
                     <span className='duration-badge'>
                         <ClockCircleOutlined /> {formatDuration(attributes.duration)}
                     </span>
@@ -91,6 +96,7 @@ VideoCard.propTypes = {
             recorderName: PropTypes.string.isRequired,
             duration: PropTypes.number,
             status: PropTypes.oneOf(['recording', 'uploading', 'processing', 'ready', 'error', 'archived']),
+            playbackFormat: PropTypes.oneOf(['video', 'hls']),
             quality: PropTypes.string,
             createdAt: PropTypes.string.isRequired,
             thumbnailUrl: PropTypes.string,
