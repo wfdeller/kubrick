@@ -187,22 +187,17 @@ const RecordTab = () => {
     }, [isRecording, isPaused, duration, updateDuration]);
 
     // Handle recording completion and upload
-    // Skip chunked upload if live streaming was used (content already uploaded as HLS)
     useEffect(() => {
         if (recordedBlob && status === 'stopped') {
             // Release camera now that recording is complete
             releaseCamera();
 
             if (liveStreamEnabled && currentRecordingId) {
-                // Live stream already uploaded content - just mark as complete
-                message.success('Live recording complete! Video available in library.');
-                completeUpload();
-                setTitle('');
-                setCurrentRecordingId(null);
-                queryClient.invalidateQueries({ queryKey: ['recordings'] });
+                // Live stream - just upload thumbnail (video already uploaded via HLS)
+                handleUpload(recordedBlob, true, currentRecordingId);
             } else {
-                // Standard recording - upload the blob
-                handleUpload(recordedBlob);
+                // Standard recording - upload video and thumbnail
+                handleUpload(recordedBlob, false, null);
             }
         }
     }, [recordedBlob, status]);
@@ -259,16 +254,18 @@ const RecordTab = () => {
             }
         }
 
-        // Capture thumbnail before starting (first frame)
-        if (cameraRef.current) {
-            const thumbnailBlob = await cameraRef.current.captureFrame();
-            thumbnailBlobRef.current = thumbnailBlob;
-        }
-
         const success = await startMediaRecording();
         if (success) {
             setRecordingStarted(null);
             updateDuration(0);
+
+            // Capture thumbnail after stream is initialized (small delay for first frame)
+            setTimeout(async () => {
+                if (cameraRef.current) {
+                    const thumbnailBlob = await cameraRef.current.captureFrame();
+                    thumbnailBlobRef.current = thumbnailBlob;
+                }
+            }, 500);
         }
     };
 
@@ -283,53 +280,58 @@ const RecordTab = () => {
         setRecordingStopped();
     };
 
-    const handleUpload = async (blob) => {
+    const handleUpload = async (blob, isLiveRecording = false, existingRecordingId = null) => {
         setUploading();
         resetUpload();
 
         try {
-            // Create recording metadata
-            const recordingData = {
-                data: {
-                    type: 'recordings',
-                    attributes: {
-                        title: title.trim() || `Recording ${new Date().toLocaleString()}`,
-                        recorderName: recorderName,
-                        metadata: metadata,
-                        quality: defaultQuality,
-                        mimeType: blob.type,
-                        fileBytes: blob.size,
-                        playbackFormat: 'video',
-                        sessionInfo: sessionInfo,
+            let recordingId = existingRecordingId;
+
+            // For non-live recordings, create metadata and upload video
+            if (!isLiveRecording) {
+                // Create recording metadata
+                const recordingData = {
+                    data: {
+                        type: 'recordings',
+                        attributes: {
+                            title: title.trim() || `Recording ${new Date().toLocaleString()}`,
+                            recorderName: recorderName,
+                            metadata: metadata,
+                            quality: defaultQuality,
+                            mimeType: blob.type,
+                            fileBytes: blob.size,
+                            playbackFormat: 'video',
+                            sessionInfo: sessionInfo,
+                        },
                     },
-                },
-            };
+                };
 
-            const metaResponse = await fetch('/api/recordings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/vnd.api+json' },
-                body: JSON.stringify(recordingData),
-            });
+                const metaResponse = await fetch('/api/recordings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/vnd.api+json' },
+                    body: JSON.stringify(recordingData),
+                });
 
-            if (!metaResponse.ok) {
-                throw new Error('Failed to create recording metadata');
+                if (!metaResponse.ok) {
+                    throw new Error('Failed to create recording metadata');
+                }
+
+                const metaResult = await metaResponse.json();
+                recordingId = metaResult.data.id;
+                setCurrentRecordingId(recordingId);
+
+                // Upload using chunked upload with progress callback
+                const result = await uploadFile(blob, recordingId, duration, (progress, chunks, total) => {
+                    console.log(`Upload progress: ${progress}% (${chunks}/${total} chunks)`);
+                });
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Upload failed');
+                }
             }
 
-            const metaResult = await metaResponse.json();
-            const recordingId = metaResult.data.id;
-            setCurrentRecordingId(recordingId);
-
-            // Upload using chunked upload with progress callback
-            const result = await uploadFile(blob, recordingId, duration, (progress, chunks, total) => {
-                console.log(`Upload progress: ${progress}% (${chunks}/${total} chunks)`);
-            });
-
-            if (!result.success) {
-                throw new Error(result.error || 'Upload failed');
-            }
-
-            // Upload thumbnail if captured
-            if (thumbnailBlobRef.current) {
+            // Upload thumbnail if captured (for both live and non-live)
+            if (thumbnailBlobRef.current && recordingId) {
                 try {
                     const thumbResponse = await fetch('/api/upload/thumbnail-url', {
                         method: 'POST',
@@ -352,7 +354,7 @@ const RecordTab = () => {
                 thumbnailBlobRef.current = null;
             }
 
-            message.success('Recording uploaded successfully!');
+            message.success(isLiveRecording ? 'Live recording complete!' : 'Recording uploaded successfully!');
             completeUpload();
             setTitle('');
             setCurrentRecordingId(null);
