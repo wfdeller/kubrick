@@ -84,9 +84,7 @@ const RecordTab = () => {
 
     // Default metadata fields (can be overridden by URL params)
     const defaultMetadataFields = {
-        eventId: '',
-        civId: '',
-        aNumber: '',
+        Location: '',
     };
 
     // Pre-populate metadata from URL parameters
@@ -550,7 +548,7 @@ const RecordTab = () => {
                                     />
                                 </div>
                                 {Object.entries(metadata).map(([key, value]) => {
-                                    const isNumeric = key === 'civId' || key === 'aNumber';
+                                    const isNumeric = false; // No numeric fields currently
                                     return (
                                         <div className='metadata-field' key={key}>
                                             <label>{key}</label>
