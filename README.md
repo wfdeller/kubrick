@@ -7,8 +7,10 @@ A web application for recording interview videos, storing them in cloud storage 
 -   **Video Recording**: Browser-based video recording using MediaRecorder API
 -   **Chunked Uploads**: Resumable uploads for large video files (hour+ recordings)
 -   **Cloud Storage**: Support for GCP Cloud Storage (primary) and AWS S3
+-   **Thumbnail Generation**: Automatic capture of video thumbnails
 -   **Session Metadata**: Automatic capture of browser, OS, timezone, IP address, and device info
 -   **Recording Library**: Browse, search, and playback recorded videos
+-   **Flexible Metadata**: Store arbitrary key-value metadata with recordings
 -   **Responsive Design**: Works on desktop and tablet devices
 -   **URL Pre-population**: Pre-fill recording metadata via URL parameters
 
@@ -17,8 +19,9 @@ A web application for recording interview videos, storing them in cloud storage 
 ### Frontend
 
 -   React 18 with Vite
+-   React Router for navigation
 -   Ant Design UI components
--   Zustand for state management (with localStorage persistence)
+-   Zustand for state management (preferences persisted to localStorage)
 -   TanStack Query for server state
 -   MediaRecorder API for video capture
 
@@ -105,14 +108,18 @@ Access the application at `http://localhost:5173`
 
 ## URL Parameters
 
-Pre-populate recording metadata via URL parameters:
+Pre-populate recording metadata via URL parameters. The recorder name is stored persistently; all other parameters are stored as flexible metadata.
 
-| Field         | Parameters               |
-| ------------- | ------------------------ |
-| Recorder Name | `recorderName` or `name` |
-| Event ID      | `eventId` or `event`     |
-| CivID         | `civId` or `civ`         |
-| A#            | `aNumber` or `a`         |
+| Parameter               | Description                            |
+| ----------------------- | -------------------------------------- |
+| `recorderName` / `name` | Recorder's name (persisted in storage) |
+| Any other parameter     | Stored in flexible metadata map        |
+
+Common metadata fields (not enforced, just conventions):
+
+-   `eventId` - Event identifier
+-   `civId` - CivID number
+-   `aNumber` - A# reference
 
 Example:
 
@@ -136,18 +143,22 @@ All endpoints follow the JSON:API v1.1 specification.
 
 ### Upload
 
-| Method | Endpoint                       | Description                 |
-| ------ | ------------------------------ | --------------------------- |
-| POST   | `/api/upload/init-chunked`     | Initialize chunked upload   |
-| POST   | `/api/upload/chunk-url`        | Get presigned URL for chunk |
-| POST   | `/api/upload/complete-chunked` | Complete chunked upload     |
-| POST   | `/api/upload/abort-chunked`    | Abort chunked upload        |
+| Method | Endpoint                       | Description                     |
+| ------ | ------------------------------ | ------------------------------- |
+| POST   | `/api/upload/presigned-url`    | Get presigned URL for upload    |
+| POST   | `/api/upload/complete`         | Mark simple upload complete     |
+| POST   | `/api/upload/init-chunked`     | Initialize chunked upload       |
+| POST   | `/api/upload/chunk-url`        | Get presigned URL for chunk     |
+| POST   | `/api/upload/complete-chunked` | Complete chunked upload         |
+| POST   | `/api/upload/abort-chunked`    | Abort chunked upload            |
+| POST   | `/api/upload/thumbnail-url`    | Get presigned URL for thumbnail |
 
-### Session
+### Session & Health
 
 | Method | Endpoint            | Description           |
 | ------ | ------------------- | --------------------- |
 | GET    | `/api/session-info` | Get client IP address |
+| GET    | `/api/health`       | Health check endpoint |
 
 ## Project Structure
 
@@ -155,23 +166,27 @@ All endpoints follow the JSON:API v1.1 specification.
 kubrick/
 ├── frontend/
 │   ├── src/
+│   │   ├── api/                  # API client functions
 │   │   ├── components/
 │   │   │   ├── RecordTab/        # Recording interface
 │   │   │   ├── LibraryTab/       # Video library
 │   │   │   └── common/           # Shared components
 │   │   ├── hooks/                # Custom React hooks
 │   │   ├── stores/               # Zustand stores
-│   │   ├── styles/               # CSS files
+│   │   ├── styles/
+│   │   │   └── components/       # Component-specific CSS
 │   │   └── App.jsx
 │   └── package.json
 │
 ├── backend/
 │   ├── src/
+│   │   ├── middleware/           # Express middleware
 │   │   ├── models/               # Mongoose models
 │   │   ├── routes/               # Express routes
-│   │   ├── services/             # Business logic
-│   │   │   └── storage/          # Cloud storage abstraction
 │   │   ├── serializers/          # JSON:API serializers
+│   │   ├── services/
+│   │   │   └── storage/          # Cloud storage abstraction
+│   │   ├── utils/                # Utilities (logger, etc.)
 │   │   └── app.js
 │   ├── gcp-cors.json             # GCP bucket CORS config
 │   └── package.json
@@ -183,29 +198,34 @@ kubrick/
 
 ```javascript
 {
-  title: String,
+  title: String,              // Required, max 200 chars
+  description: String,        // Optional, max 2000 chars
   recorderName: String,       // Required
-  eventId: String,            // Optional
-  civId: Number,              // Optional
-  aNumber: Number,            // Optional
+  metadata: Map,              // Flexible key-value pairs (eventId, civId, etc.)
   quality: '480p' | '720p' | '1080p',
   duration: Number,           // Seconds
   fileBytes: Number,
-  status: 'recording' | 'uploading' | 'processing' | 'ready' | 'error',
+  mimeType: String,           // Default: 'video/webm'
+  status: 'recording' | 'uploading' | 'processing' | 'ready' | 'error' | 'archived',
   sessionInfo: {
     ipAddress: String,
     timezone: String,
+    timezoneOffset: Number,
     browserName: String,
     browserVersion: String,
     osName: String,
     osVersion: String,
     screenResolution: String,
     language: String,
-    deviceType: String
+    userAgent: String,
+    deviceType: 'desktop' | 'tablet' | 'mobile' | 'unknown'
   },
   storageProvider: 'gcp' | 's3',
   storageBucket: String,
   storageKey: String,
+  thumbnailKey: String,       // Storage key for thumbnail image
+  uploadId: String,           // For resumable upload sessions
+  recordedAt: Date,
   createdAt: Date,
   updatedAt: Date
 }
