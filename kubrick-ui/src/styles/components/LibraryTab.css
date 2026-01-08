@@ -12,14 +12,8 @@
 }
 
 .filter-input {
-    width: 400px;
-    max-width: 100%;
-}
-
-@media (max-width: 768px) {
-    .filter-input {
-        width: 100%;
-    }
+    flex: 1;
+    min-width: 200px;
 }
 
 .sort-select {
