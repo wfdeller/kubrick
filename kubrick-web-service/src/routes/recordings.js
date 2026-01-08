@@ -6,11 +6,49 @@ import logger from '../utils/logger.js';
 
 const router = express.Router();
 
+/**
+ * Parse search query into text terms and metadata filters
+ * @param {string} query - Search string like "john Location=Studio"
+ * @returns {{ textTerms: string[], metadataFilters: { key: string, value: string }[] }}
+ *
+ * Examples:
+ *   "john" -> { textTerms: ["john"], metadataFilters: [] }
+ *   "Location=Studio" -> { textTerms: [], metadataFilters: [{ key: "Location", value: "Studio" }] }
+ *   "john Location=Studio" -> { textTerms: ["john"], metadataFilters: [{ key: "Location", value: "Studio" }] }
+ *   'Project="Big Demo"' -> { textTerms: [], metadataFilters: [{ key: "Project", value: "Big Demo" }] }
+ */
+function parseSearchQuery(queryString) {
+    if (!queryString || typeof queryString !== 'string') {
+        return { textTerms: [], metadataFilters: [] };
+    }
+
+    const textTerms = [];
+    const metadataFilters = [];
+
+    // Match key=value, key="quoted value", key='quoted value'
+    const keyValueRegex = /(\w+)=(?:"([^"]+)"|'([^']+)'|(\S+))/g;
+
+    let remainingQuery = queryString;
+    let match;
+    while ((match = keyValueRegex.exec(queryString)) !== null) {
+        const key = match[1];
+        const value = match[2] || match[3] || match[4];
+        metadataFilters.push({ key, value });
+        remainingQuery = remainingQuery.replace(match[0], '');
+    }
+
+    // Remaining tokens are text search terms
+    const terms = remainingQuery.trim().split(/\s+/).filter((t) => t.length > 0);
+    textTerms.push(...terms);
+
+    return { textTerms, metadataFilters };
+}
+
 // GET /api/recordings - List recordings with filtering and pagination
 router.get('/', async (req, res, next) => {
     try {
         const {
-            'filter[recorderName]': recorderName,
+            'filter[search]': searchQuery,
             'filter[status]': status,
             sort = '-createdAt',
             'page[number]': pageNumber = 1,
@@ -19,9 +57,36 @@ router.get('/', async (req, res, next) => {
 
         // Build query
         const query = {};
-        if (recorderName) {
-            query.recorderName = { $regex: recorderName, $options: 'i' };
+
+        // Parse and apply search query
+        if (searchQuery) {
+            const { textTerms, metadataFilters } = parseSearchQuery(searchQuery);
+
+            // Full-text search across title, description, recorderName
+            if (textTerms.length > 0) {
+                const textConditions = textTerms.map((term) => ({
+                    $or: [
+                        { title: { $regex: term, $options: 'i' } },
+                        { description: { $regex: term, $options: 'i' } },
+                        { recorderName: { $regex: term, $options: 'i' } },
+                    ],
+                }));
+                query.$and = query.$and || [];
+                query.$and.push(...textConditions);
+            }
+
+            // Metadata filters using dot notation
+            if (metadataFilters.length > 0) {
+                query.$and = query.$and || [];
+                for (const { key, value } of metadataFilters) {
+                    query.$and.push({
+                        [`metadata.${key}`]: { $regex: value, $options: 'i' },
+                    });
+                }
+            }
         }
+
+        // Status filter
         if (status) {
             query.status = status;
         } else {
@@ -34,10 +99,10 @@ router.get('/', async (req, res, next) => {
         const limit = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 20));
         const skip = (page - 1) * limit;
 
-        // Parse sort
+        // Parse sort - include _id as secondary sort for stable pagination
         const sortField = sort.startsWith('-') ? sort.slice(1) : sort;
         const sortOrder = sort.startsWith('-') ? -1 : 1;
-        const sortObj = { [sortField]: sortOrder };
+        const sortObj = { [sortField]: sortOrder, _id: sortOrder };
 
         // Execute query
         const [recordings, totalCount] = await Promise.all([
@@ -75,7 +140,7 @@ router.get('/', async (req, res, next) => {
         const baseUrl = `/api/recordings`;
         const buildUrl = (p) => {
             const params = new URLSearchParams();
-            if (recorderName) params.set('filter[recorderName]', recorderName);
+            if (searchQuery) params.set('filter[search]', searchQuery);
             if (status) params.set('filter[status]', status);
             params.set('sort', sort);
             params.set('page[number]', p);

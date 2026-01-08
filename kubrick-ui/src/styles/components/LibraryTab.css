@@ -12,7 +12,14 @@
 }
 
 .filter-input {
-    width: 300px;
+    width: 400px;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .filter-input {
+        width: 100%;
+    }
 }
 
 .sort-select {
@@ -257,8 +264,8 @@
     padding-left: var(--spacing-lg) !important;
 }
 
-/* Load More */
-.load-more-container {
+/* Pagination */
+.pagination-container {
     display: flex;
     justify-content: center;
     padding: var(--spacing-lg) 0;

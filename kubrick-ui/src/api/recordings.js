@@ -9,11 +9,11 @@ const handleResponse = async (response) => {
     return response.json();
 };
 
-export const fetchRecordings = async ({ recorderName, sort, page = 1, pageSize = 20 }) => {
+export const fetchRecordings = async ({ search, sort, page = 1, pageSize = 20 }) => {
     const params = new URLSearchParams();
 
-    if (recorderName) {
-        params.set('filter[recorderName]', recorderName);
+    if (search) {
+        params.set('filter[search]', search);
     }
     if (sort) {
         params.set('sort', sort);
