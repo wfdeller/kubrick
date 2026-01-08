@@ -1,24 +1,7 @@
 import PropTypes from 'prop-types';
 import { Card, Tag, Popconfirm } from 'antd';
 import { PlayCircleOutlined, DeleteOutlined, ClockCircleOutlined, UserOutlined, WifiOutlined } from '@ant-design/icons';
-
-const formatDuration = (seconds) => {
-    if (!seconds) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
+import { formatDuration, formatDate } from '../../utils/formatters';
 
 const statusColors = {
     ready: 'success',

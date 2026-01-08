@@ -10,27 +10,11 @@ import {
     SyncOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
+import { formatDuration, formatBytes } from '../../utils/formatters';
 import '../../styles/components/StreamsTab.css';
 
-const formatDuration = (ms) => {
-    if (!ms) return '00:00';
-    const totalSeconds = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-const formatBytes = (bytes) => {
-    if (!bytes) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let unitIndex = 0;
-    let size = bytes;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-    }
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
+// StreamsTab receives duration in ms, convert to seconds for formatDuration
+const formatDurationMs = (ms) => formatDuration(ms ? Math.floor(ms / 1000) : 0);
 
 const StreamsTab = () => {
     const [autoRefresh, setAutoRefresh] = useState(false);
@@ -119,7 +103,7 @@ const StreamsTab = () => {
             title: 'Duration',
             dataIndex: 'duration',
             key: 'duration',
-            render: (duration) => formatDuration(duration),
+            render: (duration) => formatDurationMs(duration),
         },
         {
             title: 'Viewers',

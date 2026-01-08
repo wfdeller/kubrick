@@ -1,6 +1,13 @@
 import { EventEmitter } from 'events';
 import HLSTranscoder from './HLSTranscoder.js';
-import { uploadStreamSegment, uploadStreamManifest, getStreamPlaybackUrl, getBucketName } from '../storage/index.js';
+import {
+    uploadStreamSegment,
+    uploadStreamManifest,
+    getStreamPlaybackUrl,
+    getBucketName,
+    generateStreamPrefix,
+    generateStreamManifestKey,
+} from '../storage/index.js';
 import Recording from '../../models/Recording.js';
 import logger from '../../utils/logger.js';
 
@@ -24,7 +31,7 @@ class StreamManager extends EventEmitter {
         }
 
         const bucket = getBucketName();
-        const streamPrefix = `streams/${recordingId}`;
+        const streamPrefix = generateStreamPrefix(recordingId);
 
         const streamState = {
             recordingId,
@@ -171,7 +178,7 @@ class StreamManager extends EventEmitter {
                 recording.duration = Math.floor(finalStatus.duration / 1000);
                 recording.fileBytes = finalStatus.transcoder?.bytesReceived || 0;
                 recording.storageBucket = getBucketName();
-                recording.storageKey = `streams/${recordingId}/stream.m3u8`;
+                recording.storageKey = generateStreamManifestKey(recordingId);
                 await recording.save();
                 logger.info('Updated recording after stream stop', {
                     recordingId,

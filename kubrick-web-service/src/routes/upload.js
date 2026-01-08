@@ -3,6 +3,7 @@ import Recording from '../models/Recording.js';
 import {
     getSignedUrl,
     generateStorageKey,
+    generateThumbnailKey,
     initResumableUpload,
     getChunkUploadUrl,
     completeResumableUpload,
@@ -16,22 +17,6 @@ const router = express.Router();
 
 // Default chunk size: 10MB (minimum for S3 multipart is 5MB except last part)
 const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024;
-
-/**
- * Get the next sequence number for recordings created today
- */
-const getNextSequence = async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const count = await Recording.countDocuments({
-        createdAt: { $gte: today, $lt: tomorrow },
-    });
-
-    return count + 1;
-};
 
 // POST /api/upload/presigned-url - Get presigned URL for direct upload
 router.post('/presigned-url', async (req, res, next) => {
@@ -66,9 +51,8 @@ router.post('/presigned-url', async (req, res, next) => {
             });
         }
 
-        // Generate storage key with recording ID and sequence
-        const sequence = await getNextSequence();
-        const storageKey = generateStorageKey(recordingId, sequence);
+        // Generate storage key with recording ID
+        const storageKey = generateStorageKey(recordingId);
         const bucket = getBucketName();
 
         // Get presigned upload URL
@@ -175,9 +159,8 @@ router.post('/init-chunked', async (req, res, next) => {
             });
         }
 
-        // Generate storage key with recording ID and sequence
-        const sequence = await getNextSequence();
-        const storageKey = generateStorageKey(recordingId, sequence);
+        // Generate storage key with recording ID
+        const storageKey = generateStorageKey(recordingId);
         const bucket = getBucketName();
         const mimeType = contentType || 'video/webm';
 
@@ -451,7 +434,7 @@ router.post('/thumbnail-url', async (req, res, next) => {
         }
 
         const bucket = getBucketName();
-        const thumbnailKey = `thumbnails/${recordingId}.jpg`;
+        const thumbnailKey = generateThumbnailKey(recordingId);
 
         // Get presigned upload URL for thumbnail
         const uploadUrl = await getSignedUrl(bucket, thumbnailKey, 'write', 'image/jpeg');

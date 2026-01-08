@@ -2,36 +2,7 @@ import { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Descriptions, Tag, Collapse } from 'antd';
 import HLSPlayer from '../common/HLSPlayer';
-
-const formatDuration = (seconds) => {
-    if (!seconds) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
-
-const formatBytes = (bytes) => {
-    if (!bytes) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let unitIndex = 0;
-    let size = bytes;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-    }
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
+import { formatDuration, formatDate, formatBytes } from '../../utils/formatters';
 
 const VideoPlayer = ({ recording }) => {
     const videoRef = useRef(null);
@@ -105,6 +76,12 @@ const VideoPlayer = ({ recording }) => {
                                             {attributes.playbackFormat === 'hls' ? 'HLS (Live)' : 'Video'}
                                         </Tag>
                                     </Descriptions.Item>
+                                    <Descriptions.Item label='Video Path' span={2}>
+                                        <code>{attributes.storageKey || 'N/A'}</code>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label='Thumbnail Path' span={2}>
+                                        <code>{attributes.thumbnailKey || 'N/A'}</code>
+                                    </Descriptions.Item>
                                 </Descriptions>
                             ),
                         },
@@ -161,6 +138,8 @@ VideoPlayer.propTypes = {
             recordedAt: PropTypes.string,
             videoUrl: PropTypes.string,
             playbackFormat: PropTypes.oneOf(['video', 'hls']),
+            storageKey: PropTypes.string.isRequired,
+            thumbnailKey: PropTypes.string.isRequired,
             metadata: PropTypes.object,
             sessionInfo: PropTypes.shape({
                 browserName: PropTypes.string,

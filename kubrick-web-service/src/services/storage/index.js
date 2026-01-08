@@ -4,19 +4,51 @@ import * as s3 from './s3.js';
 const provider = process.env.STORAGE_PROVIDER?.toLowerCase() === 's3' ? s3 : gcp;
 
 /**
- * Generate a storage key for a recording
- * @param {string} recordingId - MongoDB ObjectId of the recording
- * @param {number} sequence - Sequence number for the day
+ * Generate the date-based path prefix for a recording
+ * @param {Date} date - Date to use for path (defaults to now)
+ * @returns {string} Path prefix like "recordings/2026/01/08"
  */
-export const generateStorageKey = (recordingId, sequence = 1) => {
-    const date = new Date();
+export const generateDatePrefix = (date = new Date()) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    return `recordings/${year}/${month}/${day}`;
+};
 
-    const seq = String(sequence).padStart(3, '0');
+/**
+ * Generate a storage key for a video recording
+ * @param {string} recordingId - MongoDB ObjectId of the recording
+ * @param {Date} date - Date to use for path (defaults to now)
+ */
+export const generateStorageKey = (recordingId, date = new Date()) => {
+    return `${generateDatePrefix(date)}/${recordingId}.webm`;
+};
 
-    return `recordings/${year}/${month}/${day}/${recordingId}-${seq}.webm`;
+/**
+ * Generate a storage key for a thumbnail
+ * @param {string} recordingId - MongoDB ObjectId of the recording
+ * @param {Date} date - Date to use for path (defaults to now)
+ */
+export const generateThumbnailKey = (recordingId, date = new Date()) => {
+    return `${generateDatePrefix(date)}/${recordingId}.jpg`;
+};
+
+/**
+ * Generate the storage prefix for HLS stream files
+ * @param {string} recordingId - MongoDB ObjectId of the recording
+ * @param {Date} date - Date to use for path (defaults to now)
+ */
+export const generateStreamPrefix = (recordingId, date = new Date()) => {
+    return `${generateDatePrefix(date)}/${recordingId}`;
+};
+
+/**
+ * Generate a storage key for an HLS manifest
+ * @param {string} recordingId - MongoDB ObjectId of the recording
+ * @param {Date} date - Date to use for path (defaults to now)
+ */
+export const generateStreamManifestKey = (recordingId, date = new Date()) => {
+    return `${generateStreamPrefix(recordingId, date)}/stream.m3u8`;
 };
 
 /**

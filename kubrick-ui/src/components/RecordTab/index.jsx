@@ -1,16 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Select, Alert, Progress, Input, message, Card, Switch, Tag, Tooltip } from 'antd';
-import {
-    VideoCameraOutlined,
-    PauseCircleOutlined,
-    PlayCircleOutlined,
-    StopOutlined,
-    CloudUploadOutlined,
-    CloseCircleOutlined,
-    UserOutlined,
-    FormOutlined,
-    WifiOutlined,
-} from '@ant-design/icons';
+import { Button, Select, Alert, Switch, message } from 'antd';
+import { CloseCircleOutlined, WifiOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMediaRecorder } from '../../hooks/useMediaRecorder';
 import { useSessionInfo } from '../../hooks/useSessionInfo';
@@ -19,7 +9,11 @@ import { useLiveStream } from '../../hooks/useLiveStream';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { useRecordingStore } from '../../stores/recordingStore';
 import { usePreferencesStore } from '../../stores/preferencesStore';
+import { createRecording, uploadThumbnail } from '../../api/recordingService';
 import CameraPreview from './CameraPreview';
+import RecordingControls from './RecordingControls';
+import RecordingMetadata from './RecordingMetadata';
+import RecordingProgress from './RecordingProgress';
 import '../../styles/components/RecordTab.css';
 
 const QUALITY_OPTIONS = [
@@ -27,24 +21,6 @@ const QUALITY_OPTIONS = [
     { value: '720p', label: '720p (HD)' },
     { value: '1080p', label: '1080p (Full HD)' },
 ];
-
-const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-const formatBytes = (bytes) => {
-    if (!bytes) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let unitIndex = 0;
-    let size = bytes;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-    }
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
 
 const RecordTab = () => {
     const queryClient = useQueryClient();
@@ -65,8 +41,8 @@ const RecordTab = () => {
         metadata,
         setMetadata,
         setMetadataField,
-        clearMetadata,
     } = usePreferencesStore();
+
     const {
         status,
         duration,
@@ -76,26 +52,18 @@ const RecordTab = () => {
         completeUpload,
         setError: setRecordingError,
         updateDuration,
-        reset: resetRecordingStore,
     } = useRecordingStore();
 
     const { sessionInfo } = useSessionInfo();
 
-    // Default metadata fields (can be overridden by URL params)
-    const defaultMetadataFields = {
-        Location: '',
-    };
-
     // Pre-populate metadata from URL parameters
-    // recorderName persists across sessions, metadata resets each visit
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
 
         const urlRecorderName = params.get('recorderName') || params.get('name');
         if (urlRecorderName) setRecorderName(urlRecorderName);
 
-        // Start with default fields, override with URL params
-        const urlMetadata = { ...defaultMetadataFields };
+        const urlMetadata = { Location: '' };
         for (const [key, value] of params.entries()) {
             if (key !== 'recorderName' && key !== 'name') {
                 urlMetadata[key] = value;
@@ -108,15 +76,12 @@ const RecordTab = () => {
         uploadFile,
         abortUpload,
         reset: resetUpload,
-        isUploading: chunkedUploading,
         progress: uploadProgress,
         uploadedChunks,
         totalChunks,
-        error: uploadError,
         currentSpeed,
     } = useChunkedUpload();
 
-    // Live streaming hook
     const {
         isConnected: wsConnected,
         isStreaming,
@@ -127,7 +92,6 @@ const RecordTab = () => {
         sendChunk,
     } = useLiveStream();
 
-    // Callback to send chunks when live streaming
     const handleChunk = useCallback(
         (chunk) => {
             if (liveStreamEnabled && isStreaming) {
@@ -185,14 +149,11 @@ const RecordTab = () => {
     // Handle recording completion and upload
     useEffect(() => {
         if (recordedBlob && status === 'stopped') {
-            // Release camera now that recording is complete
             releaseCamera();
 
             if (liveStreamEnabled && currentRecordingId) {
-                // Live stream - just upload thumbnail (video already uploaded via HLS)
                 handleUpload(recordedBlob, true, currentRecordingId);
             } else {
-                // Standard recording - upload video and thumbnail
                 handleUpload(recordedBlob, false, null);
             }
         }
@@ -205,40 +166,21 @@ const RecordTab = () => {
         }
         clearError();
 
-        // If live streaming is enabled, create recording first and start stream session
         if (liveStreamEnabled && wsConnected) {
             try {
-                const recordingData = {
-                    data: {
-                        type: 'recordings',
-                        attributes: {
-                            title: title.trim() || `Live Recording ${new Date().toLocaleString()}`,
-                            recorderName: recorderName,
-                            metadata: metadata,
-                            quality: defaultQuality,
-                            mimeType: 'video/webm',
-                            playbackFormat: 'hls',
-                            sessionInfo: sessionInfo,
-                        },
-                    },
-                };
-
-                const metaResponse = await fetch('/api/recordings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/vnd.api+json' },
-                    body: JSON.stringify(recordingData),
+                const recording = await createRecording({
+                    title: title.trim() || `Live Recording ${new Date().toLocaleString()}`,
+                    recorderName,
+                    metadata,
+                    quality: defaultQuality,
+                    mimeType: 'video/webm',
+                    playbackFormat: 'hls',
+                    sessionInfo,
                 });
 
-                if (!metaResponse.ok) {
-                    throw new Error('Failed to create recording metadata');
-                }
+                setCurrentRecordingId(recording.id);
 
-                const metaResult = await metaResponse.json();
-                const recordingId = metaResult.data.id;
-                setCurrentRecordingId(recordingId);
-
-                // Start live stream session
-                const streamStarted = startLiveStreamSession(recordingId);
+                const streamStarted = startLiveStreamSession(recording.id);
                 if (!streamStarted) {
                     throw new Error('Failed to start live stream session');
                 }
@@ -255,7 +197,6 @@ const RecordTab = () => {
             setRecordingStarted(null);
             updateDuration(0);
 
-            // Capture thumbnail after stream is initialized (small delay for first frame)
             setTimeout(async () => {
                 if (cameraRef.current) {
                     const thumbnailBlob = await cameraRef.current.captureFrame();
@@ -266,7 +207,6 @@ const RecordTab = () => {
     };
 
     const handleStopRecording = () => {
-        // Stop live stream session if active
         if (liveStreamEnabled && isStreaming) {
             stopLiveStreamSession();
             message.info('Live stream ended');
@@ -283,69 +223,33 @@ const RecordTab = () => {
         try {
             let recordingId = existingRecordingId;
 
-            // For non-live recordings, create metadata and upload video
             if (!isLiveRecording) {
-                // Create recording metadata
-                const recordingData = {
-                    data: {
-                        type: 'recordings',
-                        attributes: {
-                            title: title.trim() || `Recording ${new Date().toLocaleString()}`,
-                            recorderName: recorderName,
-                            metadata: metadata,
-                            quality: defaultQuality,
-                            mimeType: blob.type,
-                            fileBytes: blob.size,
-                            playbackFormat: 'video',
-                            sessionInfo: sessionInfo,
-                        },
-                    },
-                };
-
-                const metaResponse = await fetch('/api/recordings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/vnd.api+json' },
-                    body: JSON.stringify(recordingData),
+                const recording = await createRecording({
+                    title: title.trim() || `Recording ${new Date().toLocaleString()}`,
+                    recorderName,
+                    metadata,
+                    quality: defaultQuality,
+                    mimeType: blob.type,
+                    fileBytes: blob.size,
+                    playbackFormat: 'video',
+                    sessionInfo,
                 });
 
-                if (!metaResponse.ok) {
-                    throw new Error('Failed to create recording metadata');
-                }
-
-                const metaResult = await metaResponse.json();
-                recordingId = metaResult.data.id;
+                recordingId = recording.id;
                 setCurrentRecordingId(recordingId);
 
-                // Upload using chunked upload with progress callback
-                const result = await uploadFile(blob, recordingId, duration, (progress, chunks, total) => {
-                    console.log(`Upload progress: ${progress}% (${chunks}/${total} chunks)`);
-                });
+                const result = await uploadFile(blob, recordingId, duration);
 
                 if (!result.success) {
                     throw new Error(result.error || 'Upload failed');
                 }
             }
 
-            // Upload thumbnail if captured (for both live and non-live)
             if (thumbnailBlobRef.current && recordingId) {
                 try {
-                    const thumbResponse = await fetch('/api/upload/thumbnail-url', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ recordingId }),
-                    });
-
-                    if (thumbResponse.ok) {
-                        const { uploadUrl } = await thumbResponse.json();
-                        await fetch(uploadUrl, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'image/jpeg' },
-                            body: thumbnailBlobRef.current,
-                        });
-                    }
+                    await uploadThumbnail(recordingId, thumbnailBlobRef.current);
                 } catch (thumbErr) {
                     console.warn('Thumbnail upload failed:', thumbErr);
-                    // Don't fail the whole upload for thumbnail
                 }
                 thumbnailBlobRef.current = null;
             }
@@ -356,7 +260,6 @@ const RecordTab = () => {
             setCurrentRecordingId(null);
             resetUpload();
 
-            // Refresh library to show new recording
             queryClient.invalidateQueries({ queryKey: ['recordings'] });
         } catch (err) {
             console.error('Upload error:', err);
@@ -424,139 +327,44 @@ const RecordTab = () => {
                             />
                         )}
 
-                        <div className='record-info'>
-                            {isRecording && (
-                                <div className='recording-indicator'>
-                                    <span className='recording-dot' />
-                                    <span className='recording-time'>{formatDuration(duration)}</span>
-                                    {isPaused && <span className='recording-paused'>PAUSED</span>}
-                                    {liveStreamEnabled && isStreaming && (
-                                        <Tag color='red' icon={<WifiOutlined />}>
-                                            LIVE
-                                        </Tag>
-                                    )}
-                                </div>
-                            )}
-
-                            {isUploading && (
-                                <div className='upload-progress-container'>
-                                    <div className='upload-progress'>
-                                        <CloudUploadOutlined className='upload-icon' />
-                                        <Progress percent={uploadProgress} size='small' status='active' />
-                                    </div>
-                                    <div className='upload-details'>
-                                        <span className='upload-chunks'>
-                                            Chunk {uploadedChunks} of {totalChunks}
-                                        </span>
-                                        {currentSpeed > 0 && <span className='upload-speed'>{currentSpeed} KB/s</span>}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <RecordingProgress
+                            isRecording={isRecording}
+                            isPaused={isPaused}
+                            duration={duration}
+                            liveStreamEnabled={liveStreamEnabled}
+                            isStreaming={isStreaming}
+                            isUploading={isUploading}
+                            uploadProgress={uploadProgress}
+                            uploadedChunks={uploadedChunks}
+                            totalChunks={totalChunks}
+                            currentSpeed={currentSpeed}
+                        />
                     </div>
 
                     <div className='metadata-section'>
                         <div className='metadata-header'>
-                            {isIdle && (
-                                <Button
-                                    type='primary'
-                                    icon={<VideoCameraOutlined />}
-                                    onClick={handleStartRecording}
-                                    disabled={isUploading || (liveStreamEnabled && !wsConnected)}
-                                    className='record-button'
-                                >
-                                    Start Recording
-                                </Button>
-                            )}
-                            {isRecording && !isPaused && (
-                                <div className='recording-buttons'>
-                                    <Button
-                                        icon={<PauseCircleOutlined />}
-                                        onClick={pauseRecording}
-                                        className='pause-button'
-                                    >
-                                        Pause
-                                    </Button>
-                                    <Button
-                                        type='primary'
-                                        danger
-                                        icon={<StopOutlined />}
-                                        onClick={handleStopRecording}
-                                        className='stop-button'
-                                    >
-                                        Stop
-                                    </Button>
-                                </div>
-                            )}
-                            {isRecording && isPaused && (
-                                <div className='recording-buttons'>
-                                    <Button
-                                        type='primary'
-                                        icon={<PlayCircleOutlined />}
-                                        onClick={resumeRecording}
-                                        className='resume-button'
-                                    >
-                                        Resume
-                                    </Button>
-                                    <Button
-                                        type='primary'
-                                        danger
-                                        icon={<StopOutlined />}
-                                        onClick={handleStopRecording}
-                                        className='stop-button'
-                                    >
-                                        Stop
-                                    </Button>
-                                </div>
-                            )}
+                            <RecordingControls
+                                isIdle={isIdle}
+                                isRecording={isRecording}
+                                isPaused={isPaused}
+                                isUploading={isUploading}
+                                liveStreamEnabled={liveStreamEnabled}
+                                wsConnected={wsConnected}
+                                onStart={handleStartRecording}
+                                onPause={pauseRecording}
+                                onResume={resumeRecording}
+                                onStop={handleStopRecording}
+                            />
                         </div>
-                        <Card
-                            title={
-                                <span>
-                                    <FormOutlined style={{ marginRight: 8 }} />
-                                    Recording Metadata
-                                </span>
-                            }
-                            size='small'
-                            className='metadata-card'
-                        >
-                            <div className='metadata-fields'>
-                                <div className='metadata-field'>
-                                    <label>Title (optional)</label>
-                                    <Input
-                                        placeholder='Recording title'
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        disabled={isRecording || isUploading}
-                                    />
-                                </div>
-                                <div className='metadata-field'>
-                                    <label>Your Name *</label>
-                                    <Input
-                                        prefix={<UserOutlined />}
-                                        placeholder='Enter your name'
-                                        value={recorderName}
-                                        onChange={(e) => setRecorderName(e.target.value)}
-                                        disabled={isRecording || isUploading}
-                                    />
-                                </div>
-                                {Object.entries(metadata).map(([key, value]) => {
-                                    const isNumeric = false; // No numeric fields currently
-                                    return (
-                                        <div className='metadata-field' key={key}>
-                                            <label>{key}</label>
-                                            <Input
-                                                type={isNumeric ? 'number' : 'text'}
-                                                placeholder={key}
-                                                value={value}
-                                                onChange={(e) => setMetadataField(key, e.target.value)}
-                                                disabled={isRecording || isUploading}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </Card>
+                        <RecordingMetadata
+                            title={title}
+                            recorderName={recorderName}
+                            metadata={metadata}
+                            disabled={isRecording || isUploading}
+                            onTitleChange={setTitle}
+                            onRecorderNameChange={setRecorderName}
+                            onMetadataFieldChange={setMetadataField}
+                        />
                     </div>
                 </div>
             </div>
