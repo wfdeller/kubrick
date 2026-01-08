@@ -186,7 +186,7 @@ router.post('/', async (req, res, next) => {
             mimeType: data.mimeType || 'video/webm',
             fileBytes: data.fileBytes || 0,
             sessionInfo: data.sessionInfo || {},
-            storageProvider: process.env.STORAGE_PROVIDER || 'gcp',
+            storageProvider: process.env.STORAGE_PROVIDER.toLowerCase(),
             playbackFormat: data.playbackFormat,
             status: 'uploading',
             recordedAt: new Date(),

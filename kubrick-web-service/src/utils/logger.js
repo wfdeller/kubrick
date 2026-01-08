@@ -41,7 +41,7 @@ const logger = winston.createLogger({
         errors({ stack: true }),
         timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })
     ),
-    defaultMeta: { service: 'kubrick-backend' },
+    defaultMeta: { service: 'kubrick-web-service' },
     transports: [],
 });
 
