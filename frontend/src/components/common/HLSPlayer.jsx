@@ -8,7 +8,7 @@ import { SyncOutlined, TeamOutlined } from '@ant-design/icons';
  * HLS video player component
  * Supports both live streams and VOD playback via HLS.js
  */
-const HLSPlayer = ({ src, autoPlay = true, isLive = false, viewerCount = 0, onError }) => {
+const HLSPlayer = ({ src, autoPlay = true, isLive = false, onError }) => {
     const videoRef = useRef(null);
     const hlsRef = useRef(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -112,13 +112,8 @@ const HLSPlayer = ({ src, autoPlay = true, isLive = false, viewerCount = 0, onEr
             {isLive && (
                 <div className='hls-player-overlay'>
                     <Tag color='red' icon={<SyncOutlined spin />}>
-                        LIVE
+                        Live Streaming
                     </Tag>
-                    {viewerCount > 0 && (
-                        <Tag icon={<TeamOutlined />}>
-                            {viewerCount} viewer{viewerCount !== 1 ? 's' : ''}
-                        </Tag>
-                    )}
                 </div>
             )}
 
@@ -146,7 +141,6 @@ HLSPlayer.propTypes = {
     src: PropTypes.string.isRequired,
     autoPlay: PropTypes.bool,
     isLive: PropTypes.bool,
-    viewerCount: PropTypes.number,
     onError: PropTypes.func,
 };
 

@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import '../../styles/components/Header.css';
 
-const Header = ({ title = 'Kubrick' }) => {
+const Header = ({ title }) => {
     return (
         <header className='app-header'>
             <div className='header-logo'>
@@ -13,7 +13,7 @@ const Header = ({ title = 'Kubrick' }) => {
 };
 
 Header.propTypes = {
-    title: PropTypes.string,
+    title: PropTypes.string.isRequired,
 };
 
 export default Header;

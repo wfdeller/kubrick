@@ -10,7 +10,6 @@ import {
     UserOutlined,
     FormOutlined,
     WifiOutlined,
-    TeamOutlined,
 } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMediaRecorder } from '../../hooks/useMediaRecorder';
@@ -121,7 +120,6 @@ const RecordTab = () => {
     const {
         isConnected: wsConnected,
         isStreaming,
-        viewerCount,
         connect: connectLiveStream,
         disconnect: disconnectLiveStream,
         startStream: startLiveStreamSession,
@@ -433,14 +431,9 @@ const RecordTab = () => {
                                     <span className='recording-time'>{formatDuration(duration)}</span>
                                     {isPaused && <span className='recording-paused'>PAUSED</span>}
                                     {liveStreamEnabled && isStreaming && (
-                                        <>
-                                            <Tag color='red' icon={<WifiOutlined />}>
-                                                LIVE
-                                            </Tag>
-                                            <Tag icon={<TeamOutlined />}>
-                                                {viewerCount} viewer{viewerCount !== 1 ? 's' : ''}
-                                            </Tag>
-                                        </>
+                                        <Tag color='red' icon={<WifiOutlined />}>
+                                            LIVE
+                                        </Tag>
                                     )}
                                 </div>
                             )}
