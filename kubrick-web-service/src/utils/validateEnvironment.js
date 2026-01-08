@@ -194,7 +194,7 @@ export const validateEnvironment = async () => {
     logger.info(`  FRONTEND_URL:      ${config.frontendUrl}`);
     logger.info('');
     logger.info('Database Configuration:');
-    logger.info(`  MONGODB_URI:       ${config.mongodbUri}`);
+    logger.info(`  MONGODB_URI:       ${maskSensitive(config.mongodbUri)}`);
     logger.info('');
     logger.info('Storage Configuration:');
     logger.info(`  STORAGE_PROVIDER:  ${config.storageProvider}`);
