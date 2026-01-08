@@ -126,7 +126,6 @@ const RecordTab = () => {
     // Wrap pause/resume to track events
     const handlePause = useCallback(() => {
         currentPauseStartRef.current = new Date();
-        console.log('[DEBUG] handlePause - paused at:', currentPauseStartRef.current);
         pauseRecording();
     }, [pauseRecording]);
 
@@ -142,8 +141,6 @@ const RecordTab = () => {
                 duration: pauseDuration,
             };
             pauseEventsRef.current.push(event);
-            console.log('[DEBUG] handleResume - added event:', event);
-            console.log('[DEBUG] handleResume - total events:', pauseEventsRef.current.length);
         }
         resumeRecording();
     }, [resumeRecording]);
@@ -265,25 +262,19 @@ const RecordTab = () => {
         // Store for use in handleUpload (which runs after recordedBlob is ready)
         finalPauseStatsRef.current = pauseStats;
 
-        console.log('[DEBUG] handleStopRecording - pauseStats:', pauseStats);
-        console.log('[DEBUG] handleStopRecording - liveStreamEnabled:', liveStreamEnabled, 'isStreaming:', isStreaming);
-
         if (liveStreamEnabled && currentRecordingId) {
             const stopPayload = {
                 duration,
                 ...pauseStats,
             };
-            console.log('[DEBUG] Sending stop payload to WebSocket:', stopPayload);
 
             // Try WebSocket first, fall back to REST API if WebSocket fails
             const wsSent = isStreaming && stopLiveStreamSession(stopPayload);
             if (!wsSent) {
-                console.log('[DEBUG] WebSocket send failed, using REST API fallback');
                 try {
                     await stopLiveStream(currentRecordingId, stopPayload);
-                    console.log('[DEBUG] REST API fallback succeeded');
                 } catch (err) {
-                    console.error('[DEBUG] REST API fallback failed:', err);
+                    console.error('Failed to stop live stream:', err);
                 }
             }
             message.info('Live stream ended');

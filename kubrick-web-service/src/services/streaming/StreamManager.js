@@ -164,12 +164,6 @@ class StreamManager extends EventEmitter {
             throw new Error(`Stream ${recordingId} not found`);
         }
 
-        logger.info('[DEBUG] StreamManager.stopStream - received stats:', {
-            recordingId,
-            stats: JSON.stringify(stats),
-            currentStatus: streamState.status,
-        });
-
         // If stream is already stopped/stopping, only update pause stats if provided
         if (streamState.status === 'stopping' || streamState.status === 'ended') {
             logger.info('Stream already stopping/stopped, updating pause stats only', { recordingId });
@@ -227,11 +221,6 @@ class StreamManager extends EventEmitter {
                 recording.storageBucket = getBucketName();
                 recording.storageKey = generateStreamManifestKey(recordingId);
                 // Store pause statistics
-                logger.info('[DEBUG] Before setting pause stats:', {
-                    'stats.pauseCount': stats.pauseCount,
-                    'stats.pauseDurationTotal': stats.pauseDurationTotal,
-                    'stats.pauseEvents length': stats.pauseEvents?.length,
-                });
                 if (stats.pauseCount !== undefined) {
                     recording.pauseCount = stats.pauseCount;
                 }
@@ -241,11 +230,6 @@ class StreamManager extends EventEmitter {
                 if (stats.pauseEvents) {
                     recording.pauseEvents = stats.pauseEvents;
                 }
-                logger.info('[DEBUG] Before save - recording pause fields:', {
-                    pauseCount: recording.pauseCount,
-                    pauseDurationTotal: recording.pauseDurationTotal,
-                    pauseEventsLength: recording.pauseEvents?.length,
-                });
                 await recording.save();
                 logger.info('Updated recording after stream stop', {
                     recordingId,

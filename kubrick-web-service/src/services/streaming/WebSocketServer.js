@@ -153,8 +153,6 @@ async function handleStop(ws, streamId, message) {
         return;
     }
 
-    logger.info('[DEBUG] handleStop - raw message:', { message: JSON.stringify(message) });
-
     const { duration, pauseCount, pauseDurationTotal, pauseEvents } = message;
 
     logger.info('Stopping stream via WebSocket', {

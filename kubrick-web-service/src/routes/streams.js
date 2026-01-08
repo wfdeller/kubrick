@@ -55,9 +55,17 @@ router.get('/:recordingId/hls/manifest.m3u8', async (req, res, next) => {
         const bucket = recording.storageBucket || getBucketName();
 
         try {
-            const manifestContent = await downloadFile(bucket, manifestKey);
+            let manifestContent = await downloadFile(bucket, manifestKey);
+
+            // For completed recordings, add #EXT-X-ENDLIST if not present
+            // This tells players the stream is complete and stops manifest polling
+            if (recording.status === 'ready' && !manifestContent.toString().includes('#EXT-X-ENDLIST')) {
+                manifestContent = manifestContent.toString().trim() + '\n#EXT-X-ENDLIST\n';
+            }
+
             res.set('Content-Type', 'application/vnd.apple.mpegurl');
-            res.set('Cache-Control', 'no-cache');
+            // Cache completed recordings, don't cache live streams
+            res.set('Cache-Control', recording.status === 'ready' ? 'public, max-age=3600' : 'no-cache');
             res.send(manifestContent);
         } catch (downloadErr) {
             // If manifest not found and stream is still recording, it may not be ready yet
