@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   frontend:
     image: ${REGISTRY:-kubrick}/kubrick-frontend:${VERSION:-latest}
     build:
-      context: ./frontend
+      context: ./kubrick-ui
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_OKTA_ENABLED: ${VITE_OKTA_ENABLED:-false}
@@ -18,23 +16,20 @@ services:
 
   backend:
     image: ${REGISTRY:-kubrick}/kubrick-backend:${VERSION:-latest}
-    build: ./backend
-    ports:
-      - "3001:3001"
+    build: ./kubrick-web-service
+    # No ports exposed - all traffic goes through frontend nginx proxy
     environment:
       - NODE_ENV=production
       - PORT=3001
       - MONGODB_URI=${MONGODB_URI}
-      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-gcp}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
       - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
-      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - OKTA_ENABLED=${OKTA_ENABLED:-false}
       - OKTA_ISSUER=${OKTA_ISSUER}
       - OKTA_CLIENT_ID=${OKTA_CLIENT_ID}
       - OKTA_AUDIENCE=${OKTA_AUDIENCE}
       - FRONTEND_URL=${FRONTEND_URL}
+      - REDIS_URL=${REDIS_URL}
     restart: always
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
@@ -42,9 +37,41 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    depends_on:
+      - redis
+    networks:
+      - kubrick
+
+  transcoder:
+    image: ${REGISTRY:-kubrick}/kubrick-transcoder:${VERSION:-latest}
+    build: ./kubrick-transcoder
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=${REDIS_URL}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - HEARTBEAT_INTERVAL_MS=5000
+      - HEARTBEAT_TTL_MS=10000
+    restart: always
+    depends_on:
+      - redis
+    deploy:
+      replicas: 2
+    networks:
+      - kubrick
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    restart: always
+    volumes:
+      - redis_data:/data
     networks:
       - kubrick
 
 networks:
   kubrick:
     driver: bridge
+
+volumes:
+  redis_data:

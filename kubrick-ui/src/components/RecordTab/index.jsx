@@ -9,7 +9,7 @@ import { useLiveStream } from '../../hooks/useLiveStream';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { useRecordingStore } from '../../stores/recordingStore';
 import { usePreferencesStore } from '../../stores/preferencesStore';
-import { createRecording, uploadThumbnail, stopLiveStream } from '../../api/recordingService';
+import { createRecording, uploadThumbnail } from '../../api/recordingService';
 import CameraPreview from './CameraPreview';
 import RecordingControls from './RecordingControls';
 import RecordingMetadata from './RecordingMetadata';
@@ -217,6 +217,8 @@ const RecordTab = () => {
         pauseEventsRef.current = [];
         currentPauseStartRef.current = null;
 
+        let liveRecordingId = null;
+
         if (liveStreamEnabled && wsConnected) {
             try {
                 const recording = await createRecording({
@@ -229,6 +231,7 @@ const RecordTab = () => {
                     sessionInfo,
                 });
 
+                liveRecordingId = recording.id;
                 setCurrentRecordingId(recording.id);
 
                 const streamStarted = startLiveStreamSession(recording.id);
@@ -252,6 +255,18 @@ const RecordTab = () => {
                 if (cameraRef.current) {
                     const thumbnailBlob = await cameraRef.current.captureFrame();
                     thumbnailBlobRef.current = thumbnailBlob;
+
+                    // For live recordings, upload thumbnail immediately so it shows in library
+                    if (liveRecordingId && thumbnailBlob) {
+                        try {
+                            await uploadThumbnail(liveRecordingId, thumbnailBlob);
+                            // Clear ref to avoid duplicate upload in handleUpload
+                            thumbnailBlobRef.current = null;
+                        } catch (err) {
+                            console.warn('Early thumbnail upload failed:', err);
+                            // Keep ref so handleUpload can retry
+                        }
+                    }
                 }
             }, 500);
         }
@@ -262,21 +277,12 @@ const RecordTab = () => {
         // Store for use in handleUpload (which runs after recordedBlob is ready)
         finalPauseStatsRef.current = pauseStats;
 
-        if (liveStreamEnabled && currentRecordingId) {
+        if (liveStreamEnabled && currentRecordingId && isStreaming) {
             const stopPayload = {
                 duration,
                 ...pauseStats,
             };
-
-            // Try WebSocket first, fall back to REST API if WebSocket fails
-            const wsSent = isStreaming && stopLiveStreamSession(stopPayload);
-            if (!wsSent) {
-                try {
-                    await stopLiveStream(currentRecordingId, stopPayload);
-                } catch (err) {
-                    console.error('Failed to stop live stream:', err);
-                }
-            }
+            stopLiveStreamSession(stopPayload);
             message.info('Live stream ended');
         }
 

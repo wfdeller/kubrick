@@ -53,7 +53,6 @@ const startServer = async () => {
     server.listen(config.port, () => {
         logger.info('Server started', {
             port: config.port,
-            storageProvider: config.storageProvider,
             nodeEnv: config.nodeEnv,
         });
     });

@@ -1,7 +1,7 @@
 {
     "name": "kubrick-backend",
     "author": "wfdeller",
-    "version": "0.1.0",
+    "version": "0.3.1",
     "private": true,
     "type": "module",
     "scripts": {
@@ -15,9 +15,10 @@
         "dotenv": "^16.3.1",
         "jsonapi-serializer": "^3.6.9",
         "@google-cloud/storage": "^7.7.0",
-        "@aws-sdk/client-s3": "^3.478.0",
-        "@aws-sdk/s3-request-presigner": "^3.478.0",
-        "winston": "^3.11.0"
+        "winston": "^3.11.0",
+        "ioredis": "^5.3.2",
+        "uuid": "^9.0.1",
+        "ws": "^8.16.0"
     },
     "devDependencies": {
         "eslint": "^8.55.0"

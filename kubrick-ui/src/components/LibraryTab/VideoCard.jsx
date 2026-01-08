@@ -5,7 +5,8 @@ import { formatDuration, formatDate } from '../../utils/formatters';
 
 const statusColors = {
     ready: 'success',
-    processing: 'processing',
+    pending: 'processing',
+    transcoding: 'processing',
     uploading: 'processing',
     error: 'error',
     recording: 'warning',
@@ -30,14 +31,15 @@ const VideoCard = ({ recording, onPlay, onArchive = null }) => {
                     <div className='thumbnail-overlay'>
                         <PlayCircleOutlined className='play-icon' />
                     </div>
-                    {attributes.status === 'recording' && attributes.playbackFormat === 'hls' && (
-                        <span className='live-badge'>
+                    {['recording', 'transcoding'].includes(attributes.status) && attributes.playbackFormat === 'hls' ? (
+                        <span className='duration-badge live'>
                             <WifiOutlined /> LIVE
                         </span>
+                    ) : (
+                        <span className='duration-badge'>
+                            <ClockCircleOutlined /> {formatDuration(attributes.duration)}
+                        </span>
                     )}
-                    <span className='duration-badge'>
-                        <ClockCircleOutlined /> {formatDuration(attributes.duration)}
-                    </span>
                 </div>
             }
         >
@@ -78,7 +80,7 @@ VideoCard.propTypes = {
             title: PropTypes.string,
             recorderName: PropTypes.string.isRequired,
             duration: PropTypes.number,
-            status: PropTypes.oneOf(['recording', 'uploading', 'processing', 'ready', 'error', 'archived']),
+            status: PropTypes.oneOf(['recording', 'pending', 'transcoding', 'uploading', 'ready', 'error', 'archived']),
             playbackFormat: PropTypes.oneOf(['video', 'hls']),
             quality: PropTypes.string,
             createdAt: PropTypes.string.isRequired,

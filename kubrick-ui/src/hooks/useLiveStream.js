@@ -106,6 +106,14 @@ export const useLiveStream = () => {
                 // These are broadcast to all clients, can be used for notifications
                 break;
 
+            // Transcoder events (informational - HLS player handles refresh automatically)
+            case 'manifestUpdated':
+            case 'segmentReady':
+            case 'streamComplete':
+            case 'statusChange':
+                // Transcoder progress events - no action needed
+                break;
+
             default:
                 console.log('Unknown message type:', message.type);
         }

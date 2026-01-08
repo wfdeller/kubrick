@@ -8,7 +8,6 @@ export const RecordingSerializer = new Serializer('recordings', {
         'description',
         'recorderName',
         'metadata',
-        'storageProvider',
         'storageBucket',
         'storageKey',
         'thumbnailKey',

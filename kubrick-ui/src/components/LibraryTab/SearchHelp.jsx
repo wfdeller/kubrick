@@ -20,7 +20,7 @@ const SearchHelp = () => {
                 open={isOpen}
                 onCancel={() => setIsOpen(false)}
                 footer={null}
-                width={500}
+                width={800}
             >
                 <Typography>
                     <Title level={5}>Text Search</Title>
@@ -39,18 +39,19 @@ const SearchHelp = () => {
                     <Paragraph>
                         <ul>
                             <li>
-                                <Text code>john</Text> - Find recordings with "john" in title, description,
-                                or recorder
+                                <Text code>demo</Text> - Find recordings with "demo" in title, description,
+                                or recorder name
                             </li>
                             <li>
-                                <Text code>Location=Studio</Text> - Find recordings where Location contains
-                                "Studio"
+                                <Text code>Location=Austin</Text> - Find recordings where Location contains
+                                "Austin"
                             </li>
                             <li>
-                                <Text code>john Location=Studio</Text> - Combine text and metadata search
+                                <Text code>Location="New York"</Text> - Search Location with spaces in value
                             </li>
                             <li>
-                                <Text code>Project="Big Demo"</Text> - Search metadata with spaces in value
+                                <Text code>interview Location=Austin</Text> - Combine text and metadata
+                                search
                             </li>
                         </ul>
                     </Paragraph>
@@ -61,6 +62,10 @@ const SearchHelp = () => {
                             <li>Search is case-insensitive</li>
                             <li>Partial matching is supported</li>
                             <li>Multiple terms use AND logic (all must match)</li>
+                            <li>
+                                Metadata keys cannot contain spaces (use <Text code>DayOfWeek</Text> not{' '}
+                                <Text code>Day of Week</Text>)
+                            </li>
                         </ul>
                     </Paragraph>
                 </Typography>

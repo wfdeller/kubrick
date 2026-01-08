@@ -158,3 +158,21 @@ export const uploadFile = async (bucket, key, localPath, contentType = 'applicat
     await storage.bucket(bucket).upload(localPath, uploadOptions);
     return { bucket, key };
 };
+
+/**
+ * Upload a buffer directly to GCP Cloud Storage
+ * Used for streaming chunks
+ */
+export const uploadBuffer = async (bucket, key, buffer, contentType = 'application/octet-stream', options = {}) => {
+    const storage = getStorage();
+    const file = storage.bucket(bucket).file(key);
+
+    await file.save(buffer, {
+        contentType,
+        metadata: {
+            cacheControl: options.cacheControl || 'public, max-age=31536000',
+        },
+    });
+
+    return { bucket, key };
+};

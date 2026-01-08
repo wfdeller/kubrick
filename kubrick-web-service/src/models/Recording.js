@@ -50,11 +50,6 @@ const RecordingSchema = new Schema(
         },
 
         // Video storage
-        storageProvider: {
-            type: String,
-            enum: ['gcp', 's3'],
-            default: 'gcp',
-        },
         storageBucket: String,
         storageKey: String,
         thumbnailKey: String, // Storage key for thumbnail image
@@ -116,7 +111,7 @@ const RecordingSchema = new Schema(
         // Processing status
         status: {
             type: String,
-            enum: ['recording', 'uploading', 'processing', 'ready', 'error', 'archived'],
+            enum: ['recording', 'pending', 'transcoding', 'uploading', 'ready', 'error', 'archived'],
             default: 'recording',
             index: true,
         },

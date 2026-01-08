@@ -7,6 +7,34 @@ import logger from '../utils/logger.js';
 const router = express.Router();
 
 /**
+ * Attach videoUrl and thumbnailUrl to a recording document
+ * @param {Object} recording - Mongoose recording document
+ */
+async function attachUrls(recording) {
+    // Generate video URL
+    try {
+        if (recording.playbackFormat === 'hls' && ['recording', 'pending', 'transcoding', 'ready'].includes(recording.status)) {
+            recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
+        } else if (recording.storageKey && recording.status === 'ready') {
+            recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
+        }
+    } catch (err) {
+        logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
+    }
+
+    // Generate thumbnail URL
+    if (recording.thumbnailKey) {
+        try {
+            recording.thumbnailUrl = await getSignedUrl(recording.storageBucket, recording.thumbnailKey, 'read');
+        } catch (err) {
+            logger.warn('Failed to generate thumbnail URL', { recordingId: recording._id, error: err.message });
+        }
+    }
+
+    return recording;
+}
+
+/**
  * Parse search query into text terms and metadata filters
  * @param {string} query - Search string like "john Location=Studio"
  * @returns {{ textTerms: string[], metadataFilters: { key: string, value: string }[] }}
@@ -47,13 +75,16 @@ function parseSearchQuery(queryString) {
 // GET /api/recordings - List recordings with filtering and pagination
 router.get('/', async (req, res, next) => {
     try {
+        // Express parses bracket notation as nested objects
         const {
-            'filter[search]': searchQuery,
-            'filter[status]': status,
+            filter = {},
             sort = '-createdAt',
-            'page[number]': pageNumber = 1,
-            'page[size]': pageSize = 20,
+            page: pageParams = {},
         } = req.query;
+        const searchQuery = filter.search;
+        const status = filter.status;
+        const pageNumber = pageParams.number || 1;
+        const pageSize = pageParams.size || 20;
 
         // Build query
         const query = {};
@@ -111,29 +142,7 @@ router.get('/', async (req, res, next) => {
         ]);
 
         // Generate URLs for each recording
-        const recordingsWithUrls = await Promise.all(
-            recordings.map(async (recording) => {
-                try {
-                    // HLS streams can be played while recording (live) or when ready
-                    if (recording.playbackFormat === 'hls' && (recording.status === 'recording' || recording.status === 'ready')) {
-                        recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
-                    } else if (recording.storageKey && recording.status === 'ready') {
-                        // Regular video - only when ready and has storage key
-                        recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
-                    }
-                } catch (err) {
-                    logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
-                }
-                if (recording.thumbnailKey) {
-                    try {
-                        recording.thumbnailUrl = await getSignedUrl(recording.storageBucket, recording.thumbnailKey, 'read');
-                    } catch (err) {
-                        logger.warn('Failed to generate thumbnail URL', { recordingId: recording._id, error: err.message });
-                    }
-                }
-                return recording;
-            })
-        );
+        const recordingsWithUrls = await Promise.all(recordings.map(attachUrls));
 
         // Build pagination links
         const totalPages = Math.ceil(totalCount / limit);
@@ -180,25 +189,7 @@ router.get('/:id', async (req, res, next) => {
             });
         }
 
-        // Generate URLs
-        try {
-            // HLS streams can be played while recording (live) or when ready
-            if (recording.playbackFormat === 'hls' && (recording.status === 'recording' || recording.status === 'ready')) {
-                recording.videoUrl = `/api/streams/${recording._id}/hls/manifest.m3u8`;
-            } else if (recording.storageKey && recording.status === 'ready') {
-                // Regular video - only when ready and has storage key
-                recording.videoUrl = await getSignedUrl(recording.storageBucket, recording.storageKey, 'read');
-            }
-        } catch (err) {
-            logger.warn('Failed to generate video URL', { recordingId: recording._id, error: err.message });
-        }
-        if (recording.thumbnailKey) {
-            try {
-                recording.thumbnailUrl = await getSignedUrl(recording.storageBucket, recording.thumbnailKey, 'read');
-            } catch (err) {
-                logger.warn('Failed to generate thumbnail URL', { recordingId: recording._id, error: err.message });
-            }
-        }
+        await attachUrls(recording);
 
         res.json(serializeRecording(recording));
     } catch (err) {
@@ -251,7 +242,6 @@ router.post('/', async (req, res, next) => {
             mimeType: data.mimeType || 'video/webm',
             fileBytes: data.fileBytes || 0,
             sessionInfo: data.sessionInfo || {},
-            storageProvider: process.env.STORAGE_PROVIDER.toLowerCase(),
             playbackFormat: data.playbackFormat,
             status: 'uploading',
             recordedAt: new Date(),

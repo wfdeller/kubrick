@@ -260,7 +260,7 @@
 .stop-button,
 .pause-button,
 .resume-button {
-    min-width: 140px;
+    min-width: 100px;
 }
 
 /* Live Stream Toggle */

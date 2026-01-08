@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   frontend:
     build:
-      context: ./frontend
+      context: ./kubrick-ui
       args:
         VITE_API_URL: http://localhost:3001
     ports:
@@ -14,21 +12,41 @@ services:
       - kubrick
 
   backend:
-    build: ./backend
+    build: ./kubrick-web-service
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongo:27017/kubrick
-      - STORAGE_PROVIDER=gcp
       - PORT=3001
       - FRONTEND_URL=http://localhost:5173
+      - REDIS_URL=redis://redis:6379
     env_file:
-      - ./backend/.env
+      - ./kubrick-web-service/.env
     depends_on:
       - mongo
+      - redis
     volumes:
-      - ./backend/src:/app/src
+      - ./kubrick-web-service/src:/opt/app-root/src/src
+      - ./kubrick-web-service/kubrick-storage-key.json:/opt/app-root/src/kubrick-storage-key.json:ro
+    networks:
+      - kubrick
+
+  transcoder:
+    build: ./kubrick-transcoder
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+      - HEARTBEAT_INTERVAL_MS=5000
+      - HEARTBEAT_TTL_MS=10000
+    env_file:
+      - ./kubrick-transcoder/.env
+    volumes:
+      - ./kubrick-transcoder/kubrick-storage-key.json:/app/kubrick-storage-key.json:ro
+    depends_on:
+      - redis
+    deploy:
+      replicas: 1
     networks:
       - kubrick
 
@@ -41,9 +59,20 @@ services:
     networks:
       - kubrick
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - kubrick
+
 networks:
   kubrick:
     driver: bridge
 
 volumes:
   mongo_data:
+  redis_data:

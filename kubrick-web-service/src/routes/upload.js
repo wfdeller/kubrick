@@ -8,14 +8,13 @@ import {
     getChunkUploadUrl,
     completeResumableUpload,
     abortResumableUpload,
-    getProviderName,
     getBucketName,
 } from '../services/storage/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
 
-// Default chunk size: 10MB (minimum for S3 multipart is 5MB except last part)
+// Default chunk size: 10MB (GCP resumable uploads require 256KB minimum, but 10MB is optimal)
 const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024;
 
 // POST /api/upload/presigned-url - Get presigned URL for direct upload
@@ -188,7 +187,6 @@ router.post('/init-chunked', async (req, res, next) => {
             fileSize,
             totalChunks,
             chunkSize,
-            provider: getProviderName(),
         });
 
         res.json({
@@ -197,7 +195,6 @@ router.post('/init-chunked', async (req, res, next) => {
             storageKey,
             chunkSize,
             totalChunks,
-            provider: getProviderName(),
         });
     } catch (err) {
         next(err);
@@ -262,7 +259,6 @@ router.post('/chunk-url', async (req, res, next) => {
         res.json({
             uploadUrl,
             partNumber,
-            provider: getProviderName(),
         });
     } catch (err) {
         next(err);

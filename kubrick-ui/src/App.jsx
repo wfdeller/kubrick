@@ -5,16 +5,13 @@ import Header from './components/common/Header';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import RecordTab from './components/RecordTab';
 import LibraryTab from './components/LibraryTab';
-import StreamsTab from './components/StreamsTab';
 import { useSessionInfo } from './hooks/useSessionInfo';
-import { useFeatureFlags } from './hooks/useFeatureFlags';
 import './styles/components/App.css';
 
 const App = () => {
     const [activeTab, setActiveTab] = useState('record');
     const [sessionModalOpen, setSessionModalOpen] = useState(false);
     const { sessionInfo, loading: sessionLoading } = useSessionInfo();
-    const { isLiveStreamingEnabled } = useFeatureFlags();
 
     const tabItems = [
         {
@@ -35,20 +32,6 @@ const App = () => {
                 </ErrorBoundary>
             ),
         },
-        // Only show Streams tab when live streaming is enabled
-        ...(isLiveStreamingEnabled
-            ? [
-                  {
-                      key: 'streams',
-                      label: 'Streams',
-                      children: (
-                          <ErrorBoundary title='Streams Error'>
-                              <StreamsTab />
-                          </ErrorBoundary>
-                      ),
-                  },
-              ]
-            : []),
     ];
 
     const sessionInfoButton = (
