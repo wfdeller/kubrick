@@ -149,13 +149,59 @@ class StreamManager extends EventEmitter {
 
     /**
      * Stop a live stream and update the recording
+     * @param {string} recordingId - Recording ID
+     * @param {object} stats - Recording statistics from client
+     * @param {number} stats.duration - Actual recording duration (excluding pauses)
+     * @param {number} stats.pauseCount - Number of pauses
+     * @param {number} stats.pauseDurationTotal - Total paused time in seconds
+     * @param {Array} stats.pauseEvents - Array of pause events
      */
-    async stopStream(recordingId) {
+    async stopStream(recordingId, stats = {}) {
         const transcoder = this.transcoders.get(recordingId);
         const streamState = this.streams.get(recordingId);
 
         if (!transcoder || !streamState) {
             throw new Error(`Stream ${recordingId} not found`);
+        }
+
+        logger.info('[DEBUG] StreamManager.stopStream - received stats:', {
+            recordingId,
+            stats: JSON.stringify(stats),
+            currentStatus: streamState.status,
+        });
+
+        // If stream is already stopped/stopping, only update pause stats if provided
+        if (streamState.status === 'stopping' || streamState.status === 'ended') {
+            logger.info('Stream already stopping/stopped, updating pause stats only', { recordingId });
+            // Only update database with pause stats if they're provided
+            if (stats.pauseCount !== undefined || stats.pauseEvents) {
+                try {
+                    const recording = await Recording.findById(recordingId);
+                    if (recording) {
+                        if (stats.duration !== undefined) {
+                            recording.duration = stats.duration;
+                        }
+                        if (stats.pauseCount !== undefined) {
+                            recording.pauseCount = stats.pauseCount;
+                        }
+                        if (stats.pauseDurationTotal !== undefined) {
+                            recording.pauseDurationTotal = stats.pauseDurationTotal;
+                        }
+                        if (stats.pauseEvents) {
+                            recording.pauseEvents = stats.pauseEvents;
+                        }
+                        await recording.save();
+                        logger.info('Updated pause stats for already-stopped stream', {
+                            recordingId,
+                            pauseCount: recording.pauseCount,
+                            pauseDurationTotal: recording.pauseDurationTotal,
+                        });
+                    }
+                } catch (err) {
+                    logger.error('Failed to update pause stats', { recordingId, error: err.message });
+                }
+            }
+            return this.getStreamStatus(recordingId);
         }
 
         logger.info('Stopping live stream', { recordingId });
@@ -175,15 +221,38 @@ class StreamManager extends EventEmitter {
                 recording.status = 'ready';
                 recording.isLiveStreaming = false;
                 recording.streamEndedAt = new Date();
-                recording.duration = Math.floor(finalStatus.duration / 1000);
+                // Use client-provided duration (excludes paused time) if available
+                recording.duration = stats.duration ?? Math.floor(finalStatus.duration / 1000);
                 recording.fileBytes = finalStatus.transcoder?.bytesReceived || 0;
                 recording.storageBucket = getBucketName();
                 recording.storageKey = generateStreamManifestKey(recordingId);
+                // Store pause statistics
+                logger.info('[DEBUG] Before setting pause stats:', {
+                    'stats.pauseCount': stats.pauseCount,
+                    'stats.pauseDurationTotal': stats.pauseDurationTotal,
+                    'stats.pauseEvents length': stats.pauseEvents?.length,
+                });
+                if (stats.pauseCount !== undefined) {
+                    recording.pauseCount = stats.pauseCount;
+                }
+                if (stats.pauseDurationTotal !== undefined) {
+                    recording.pauseDurationTotal = stats.pauseDurationTotal;
+                }
+                if (stats.pauseEvents) {
+                    recording.pauseEvents = stats.pauseEvents;
+                }
+                logger.info('[DEBUG] Before save - recording pause fields:', {
+                    pauseCount: recording.pauseCount,
+                    pauseDurationTotal: recording.pauseDurationTotal,
+                    pauseEventsLength: recording.pauseEvents?.length,
+                });
                 await recording.save();
                 logger.info('Updated recording after stream stop', {
                     recordingId,
                     status: 'ready',
                     duration: recording.duration,
+                    pauseCount: recording.pauseCount,
+                    pauseDurationTotal: recording.pauseDurationTotal,
                     fileBytes: recording.fileBytes,
                 });
             }

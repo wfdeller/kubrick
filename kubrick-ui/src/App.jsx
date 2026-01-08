@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tabs, Button, Modal, Tooltip, Descriptions, Tag, Spin } from 'antd';
 import { InfoCircleOutlined, GlobalOutlined } from '@ant-design/icons';
 import Header from './components/common/Header';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import RecordTab from './components/RecordTab';
 import LibraryTab from './components/LibraryTab';
 import StreamsTab from './components/StreamsTab';
@@ -19,12 +20,20 @@ const App = () => {
         {
             key: 'record',
             label: 'Record',
-            children: <RecordTab />,
+            children: (
+                <ErrorBoundary title='Recording Error' showError>
+                    <RecordTab />
+                </ErrorBoundary>
+            ),
         },
         {
             key: 'library',
             label: 'Library',
-            children: <LibraryTab />,
+            children: (
+                <ErrorBoundary title='Library Error'>
+                    <LibraryTab />
+                </ErrorBoundary>
+            ),
         },
         // Only show Streams tab when live streaming is enabled
         ...(isLiveStreamingEnabled
@@ -32,7 +41,11 @@ const App = () => {
                   {
                       key: 'streams',
                       label: 'Streams',
-                      children: <StreamsTab />,
+                      children: (
+                          <ErrorBoundary title='Streams Error'>
+                              <StreamsTab />
+                          </ErrorBoundary>
+                      ),
                   },
               ]
             : []),

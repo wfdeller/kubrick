@@ -51,6 +51,15 @@
     height: 32px;
 }
 
+/* Video Footer - Live toggle and upload progress under video */
+.video-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    min-height: 32px;
+}
+
 /* Camera Preview */
 .camera-preview {
     position: relative;

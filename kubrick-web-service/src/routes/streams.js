@@ -1,8 +1,18 @@
 import express from 'express';
 import streamManager from '../services/streaming/StreamManager.js';
 import Recording from '../models/Recording.js';
-import { downloadFile, getBucketName } from '../services/storage/index.js';
+import { downloadFile, getBucketName, generateStreamManifestKey } from '../services/storage/index.js';
 import logger from '../utils/logger.js';
+
+/**
+ * Get the stream directory prefix from a manifest storage key
+ * e.g., "recordings/2026/01/08/abc123/stream.m3u8" -> "recordings/2026/01/08/abc123"
+ */
+const getStreamPrefix = (storageKey) => {
+    if (!storageKey) return null;
+    const lastSlash = storageKey.lastIndexOf('/');
+    return lastSlash > 0 ? storageKey.substring(0, lastSlash) : null;
+};
 
 const router = express.Router();
 
@@ -41,7 +51,7 @@ router.get('/:recordingId/hls/manifest.m3u8', async (req, res, next) => {
             });
         }
 
-        const manifestKey = recording.storageKey || `streams/${recordingId}/stream.m3u8`;
+        const manifestKey = recording.storageKey || generateStreamManifestKey(recordingId);
         const bucket = recording.storageBucket || getBucketName();
 
         try {
@@ -100,7 +110,8 @@ router.get('/:recordingId/hls/:segment', async (req, res, next) => {
         }
 
         const bucket = recording.storageBucket || getBucketName();
-        const segmentKey = `streams/${recordingId}/${segment}`;
+        const streamPrefix = getStreamPrefix(recording.storageKey) || `recordings/${recordingId}`;
+        const segmentKey = `${streamPrefix}/${segment}`;
 
         const segmentContent = await downloadFile(bucket, segmentKey);
 
@@ -292,12 +303,25 @@ router.post('/:recordingId/start', async (req, res, next) => {
 /**
  * POST /api/streams/:recordingId/stop
  * Stop a live stream
+ * @body {number} duration - Actual recording duration in seconds (excluding paused time)
+ * @body {number} pauseCount - Number of times recording was paused
+ * @body {number} pauseDurationTotal - Total paused duration in seconds
+ * @body {Array} pauseEvents - Array of pause events with timestamps
  */
 router.post('/:recordingId/stop', async (req, res, next) => {
     try {
         const { recordingId } = req.params;
+        const { duration, pauseCount, pauseDurationTotal, pauseEvents } = req.body;
 
-        const finalStatus = await streamManager.stopStream(recordingId);
+        const stats = {};
+        if (duration !== undefined) stats.duration = duration;
+        if (pauseCount !== undefined) stats.pauseCount = pauseCount;
+        if (pauseDurationTotal !== undefined) stats.pauseDurationTotal = pauseDurationTotal;
+        if (pauseEvents !== undefined) stats.pauseEvents = pauseEvents;
+
+        logger.info('Stopping live stream via API', { recordingId, stats });
+
+        const finalStatus = await streamManager.stopStream(recordingId, stats);
 
         logger.info('Stopped live stream via API', { recordingId });
 

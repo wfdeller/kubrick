@@ -80,6 +80,22 @@ const RecordingSchema = new Schema(
             type: Number,
             default: 0,
         },
+        // Pause tracking
+        pauseCount: {
+            type: Number,
+            default: 0,
+        },
+        pauseDurationTotal: {
+            type: Number,
+            default: 0,
+        },
+        pauseEvents: [
+            {
+                pausedAt: Date,
+                resumedAt: Date,
+                duration: Number,
+            },
+        ],
         fileBytes: {
             type: Number,
             default: 0,

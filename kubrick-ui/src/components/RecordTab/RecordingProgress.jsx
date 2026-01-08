@@ -9,11 +9,11 @@ const RecordingProgress = ({
     duration,
     liveStreamEnabled,
     isStreaming,
-    isUploading,
-    uploadProgress,
-    uploadedChunks,
-    totalChunks,
-    currentSpeed,
+    isUploading = false,
+    uploadProgress = 0,
+    uploadedChunks = 0,
+    totalChunks = 0,
+    currentSpeed = 0,
 }) => {
     return (
         <div className='record-info'>
@@ -54,11 +54,11 @@ RecordingProgress.propTypes = {
     duration: PropTypes.number.isRequired,
     liveStreamEnabled: PropTypes.bool.isRequired,
     isStreaming: PropTypes.bool.isRequired,
-    isUploading: PropTypes.bool.isRequired,
-    uploadProgress: PropTypes.number.isRequired,
-    uploadedChunks: PropTypes.number.isRequired,
-    totalChunks: PropTypes.number.isRequired,
-    currentSpeed: PropTypes.number.isRequired,
+    isUploading: PropTypes.bool,
+    uploadProgress: PropTypes.number,
+    uploadedChunks: PropTypes.number,
+    totalChunks: PropTypes.number,
+    currentSpeed: PropTypes.number,
 };
 
 export default RecordingProgress;

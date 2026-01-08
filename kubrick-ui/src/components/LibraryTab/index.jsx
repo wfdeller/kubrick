@@ -4,6 +4,7 @@ import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import VideoCard from './VideoCard';
 import VideoPlayer from './VideoPlayer';
+import ErrorBoundary from '../common/ErrorBoundary';
 import { usePreferencesStore } from '../../stores/preferencesStore';
 import { fetchRecordings, archiveRecording } from '../../api/recordings';
 import '../../styles/components/LibraryTab.css';
@@ -139,7 +140,11 @@ const LibraryTab = () => {
                 destroyOnHidden
                 className='video-modal'
             >
-                {selectedVideo && <VideoPlayer recording={selectedVideo} />}
+                {selectedVideo && (
+                    <ErrorBoundary title='Playback Error' showError>
+                        <VideoPlayer recording={selectedVideo} />
+                    </ErrorBoundary>
+                )}
             </Modal>
         </div>
     );

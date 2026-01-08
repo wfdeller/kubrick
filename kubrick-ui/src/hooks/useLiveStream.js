@@ -151,8 +151,13 @@ export const useLiveStream = () => {
 
     /**
      * Stop streaming
+     * @param {object} stats - Recording statistics
+     * @param {number} stats.duration - Actual recording duration in seconds (excluding paused time)
+     * @param {number} stats.pauseCount - Number of times recording was paused
+     * @param {number} stats.pauseDurationTotal - Total paused duration in seconds
+     * @param {Array} stats.pauseEvents - Array of pause events with timestamps
      */
-    const stopStream = useCallback(() => {
+    const stopStream = useCallback((stats = {}) => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             setError('Not connected to server');
             return false;
@@ -161,6 +166,7 @@ export const useLiveStream = () => {
         wsRef.current.send(
             JSON.stringify({
                 type: 'stop',
+                ...stats,
             })
         );
 

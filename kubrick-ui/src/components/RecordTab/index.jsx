@@ -9,7 +9,7 @@ import { useLiveStream } from '../../hooks/useLiveStream';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { useRecordingStore } from '../../stores/recordingStore';
 import { usePreferencesStore } from '../../stores/preferencesStore';
-import { createRecording, uploadThumbnail } from '../../api/recordingService';
+import { createRecording, uploadThumbnail, stopLiveStream } from '../../api/recordingService';
 import CameraPreview from './CameraPreview';
 import RecordingControls from './RecordingControls';
 import RecordingMetadata from './RecordingMetadata';
@@ -30,6 +30,11 @@ const RecordTab = () => {
     const timerRef = useRef(null);
     const cameraRef = useRef(null);
     const thumbnailBlobRef = useRef(null);
+
+    // Pause tracking (using ref for synchronous updates)
+    const pauseEventsRef = useRef([]);
+    const currentPauseStartRef = useRef(null);
+    const finalPauseStatsRef = useRef(null);
 
     const { isLiveStreamingEnabled } = useFeatureFlags();
 
@@ -118,6 +123,51 @@ const RecordTab = () => {
         clearError,
     } = useMediaRecorder(defaultQuality, liveStreamEnabled ? handleChunk : null);
 
+    // Wrap pause/resume to track events
+    const handlePause = useCallback(() => {
+        currentPauseStartRef.current = new Date();
+        console.log('[DEBUG] handlePause - paused at:', currentPauseStartRef.current);
+        pauseRecording();
+    }, [pauseRecording]);
+
+    const handleResume = useCallback(() => {
+        if (currentPauseStartRef.current) {
+            const pausedAt = currentPauseStartRef.current;
+            const resumedAt = new Date();
+            const pauseDuration = Math.floor((resumedAt - pausedAt) / 1000);
+            currentPauseStartRef.current = null;
+            const event = {
+                pausedAt: pausedAt.toISOString(),
+                resumedAt: resumedAt.toISOString(),
+                duration: pauseDuration,
+            };
+            pauseEventsRef.current.push(event);
+            console.log('[DEBUG] handleResume - added event:', event);
+            console.log('[DEBUG] handleResume - total events:', pauseEventsRef.current.length);
+        }
+        resumeRecording();
+    }, [resumeRecording]);
+
+    // Calculate pause statistics
+    const getPauseStats = useCallback(() => {
+        const events = [...pauseEventsRef.current];
+        // If currently paused, add the in-progress pause
+        if (currentPauseStartRef.current) {
+            const now = new Date();
+            events.push({
+                pausedAt: currentPauseStartRef.current.toISOString(),
+                resumedAt: now.toISOString(),
+                duration: Math.floor((now - currentPauseStartRef.current) / 1000),
+            });
+        }
+        const pauseDurationTotal = events.reduce((sum, e) => sum + e.duration, 0);
+        return {
+            pauseCount: events.length,
+            pauseDurationTotal,
+            pauseEvents: events,
+        };
+    }, []);
+
     // Cleanup camera on unmount only
     const cleanupRef = useRef(cleanup);
     cleanupRef.current = cleanup;
@@ -166,6 +216,10 @@ const RecordTab = () => {
         }
         clearError();
 
+        // Reset pause tracking
+        pauseEventsRef.current = [];
+        currentPauseStartRef.current = null;
+
         if (liveStreamEnabled && wsConnected) {
             try {
                 const recording = await createRecording({
@@ -206,14 +260,41 @@ const RecordTab = () => {
         }
     };
 
-    const handleStopRecording = () => {
-        if (liveStreamEnabled && isStreaming) {
-            stopLiveStreamSession();
+    const handleStopRecording = async () => {
+        const pauseStats = getPauseStats();
+        // Store for use in handleUpload (which runs after recordedBlob is ready)
+        finalPauseStatsRef.current = pauseStats;
+
+        console.log('[DEBUG] handleStopRecording - pauseStats:', pauseStats);
+        console.log('[DEBUG] handleStopRecording - liveStreamEnabled:', liveStreamEnabled, 'isStreaming:', isStreaming);
+
+        if (liveStreamEnabled && currentRecordingId) {
+            const stopPayload = {
+                duration,
+                ...pauseStats,
+            };
+            console.log('[DEBUG] Sending stop payload to WebSocket:', stopPayload);
+
+            // Try WebSocket first, fall back to REST API if WebSocket fails
+            const wsSent = isStreaming && stopLiveStreamSession(stopPayload);
+            if (!wsSent) {
+                console.log('[DEBUG] WebSocket send failed, using REST API fallback');
+                try {
+                    await stopLiveStream(currentRecordingId, stopPayload);
+                    console.log('[DEBUG] REST API fallback succeeded');
+                } catch (err) {
+                    console.error('[DEBUG] REST API fallback failed:', err);
+                }
+            }
             message.info('Live stream ended');
         }
 
         stopMediaRecording();
         setRecordingStopped();
+
+        // Reset pause tracking for next recording
+        pauseEventsRef.current = [];
+        currentPauseStartRef.current = null;
     };
 
     const handleUpload = async (blob, isLiveRecording = false, existingRecordingId = null) => {
@@ -222,6 +303,7 @@ const RecordTab = () => {
 
         try {
             let recordingId = existingRecordingId;
+            const pauseStats = finalPauseStatsRef.current || { pauseCount: 0, pauseDurationTotal: 0, pauseEvents: [] };
 
             if (!isLiveRecording) {
                 const recording = await createRecording({
@@ -233,6 +315,8 @@ const RecordTab = () => {
                     fileBytes: blob.size,
                     playbackFormat: 'video',
                     sessionInfo,
+                    duration,
+                    ...pauseStats,
                 });
 
                 recordingId = recording.id;
@@ -259,6 +343,7 @@ const RecordTab = () => {
             setTitle('');
             setCurrentRecordingId(null);
             resetUpload();
+            finalPauseStatsRef.current = null;
 
             queryClient.invalidateQueries({ queryKey: ['recordings'] });
         } catch (err) {
@@ -289,6 +374,29 @@ const RecordTab = () => {
                 <div className='record-top-row'>
                     <div className='record-video-section'>
                         <div className='video-header'>
+                            {isRecording ? (
+                                <RecordingProgress
+                                    isRecording={isRecording}
+                                    isPaused={isPaused}
+                                    duration={duration}
+                                    liveStreamEnabled={liveStreamEnabled}
+                                    isStreaming={isStreaming}
+                                />
+                            ) : (
+                                <Select
+                                    value={defaultQuality}
+                                    onChange={setDefaultQuality}
+                                    options={QUALITY_OPTIONS}
+                                    disabled={isUploading}
+                                    className='quality-select'
+                                    size='small'
+                                />
+                            )}
+                        </div>
+
+                        <CameraPreview ref={cameraRef} stream={stream} isRecording={isRecording} />
+
+                        <div className='video-footer'>
                             {isLiveStreamingEnabled && (
                                 <div className='live-stream-toggle'>
                                     <Switch
@@ -303,17 +411,22 @@ const RecordTab = () => {
                                     </span>
                                 </div>
                             )}
-                            <Select
-                                value={defaultQuality}
-                                onChange={setDefaultQuality}
-                                options={QUALITY_OPTIONS}
-                                disabled={isRecording || isUploading}
-                                className='quality-select'
-                                size='small'
-                            />
-                        </div>
 
-                        <CameraPreview ref={cameraRef} stream={stream} isRecording={isRecording} />
+                            {isUploading && (
+                                <RecordingProgress
+                                    isRecording={false}
+                                    isPaused={false}
+                                    duration={0}
+                                    liveStreamEnabled={false}
+                                    isStreaming={false}
+                                    isUploading={isUploading}
+                                    uploadProgress={uploadProgress}
+                                    uploadedChunks={uploadedChunks}
+                                    totalChunks={totalChunks}
+                                    currentSpeed={currentSpeed}
+                                />
+                            )}
+                        </div>
 
                         {mediaError && (
                             <Alert
@@ -326,19 +439,6 @@ const RecordTab = () => {
                                 className='record-error'
                             />
                         )}
-
-                        <RecordingProgress
-                            isRecording={isRecording}
-                            isPaused={isPaused}
-                            duration={duration}
-                            liveStreamEnabled={liveStreamEnabled}
-                            isStreaming={isStreaming}
-                            isUploading={isUploading}
-                            uploadProgress={uploadProgress}
-                            uploadedChunks={uploadedChunks}
-                            totalChunks={totalChunks}
-                            currentSpeed={currentSpeed}
-                        />
                     </div>
 
                     <div className='metadata-section'>
@@ -351,8 +451,8 @@ const RecordTab = () => {
                                 liveStreamEnabled={liveStreamEnabled}
                                 wsConnected={wsConnected}
                                 onStart={handleStartRecording}
-                                onPause={pauseRecording}
-                                onResume={resumeRecording}
+                                onPause={handlePause}
+                                onResume={handleResume}
                                 onStop={handleStopRecording}
                             />
                         </div>

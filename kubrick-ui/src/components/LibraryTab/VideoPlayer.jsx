@@ -76,6 +76,16 @@ const VideoPlayer = ({ recording }) => {
                                             {attributes.playbackFormat === 'hls' ? 'HLS (Live)' : 'Video'}
                                         </Tag>
                                     </Descriptions.Item>
+                                    {attributes.pauseCount > 0 && (
+                                        <>
+                                            <Descriptions.Item label='Pauses'>
+                                                {attributes.pauseCount}
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label='Paused Time'>
+                                                {formatDuration(attributes.pauseDurationTotal)}
+                                            </Descriptions.Item>
+                                        </>
+                                    )}
                                     <Descriptions.Item label='Video Path' span={2}>
                                         <code>{attributes.storageKey || 'N/A'}</code>
                                     </Descriptions.Item>
@@ -140,6 +150,8 @@ VideoPlayer.propTypes = {
             playbackFormat: PropTypes.oneOf(['video', 'hls']),
             storageKey: PropTypes.string.isRequired,
             thumbnailKey: PropTypes.string.isRequired,
+            pauseCount: PropTypes.number,
+            pauseDurationTotal: PropTypes.number,
             metadata: PropTypes.object,
             sessionInfo: PropTypes.shape({
                 browserName: PropTypes.string,

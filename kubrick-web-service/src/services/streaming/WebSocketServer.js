@@ -46,7 +46,7 @@ export const initWebSocketServer = (server) => {
                         break;
 
                     case 'stop':
-                        await handleStop(ws, streamId);
+                        await handleStop(ws, streamId, message);
                         break;
 
                     case 'ping':
@@ -147,15 +147,30 @@ async function handleStart(ws, message) {
 /**
  * Handle stream stop command
  */
-async function handleStop(ws, streamId) {
+async function handleStop(ws, streamId, message) {
     if (!streamId) {
         ws.send(JSON.stringify({ error: 'No active stream' }));
         return;
     }
 
-    logger.info('Stopping stream via WebSocket', { streamId });
+    logger.info('[DEBUG] handleStop - raw message:', { message: JSON.stringify(message) });
 
-    const finalStatus = await streamManager.stopStream(streamId);
+    const { duration, pauseCount, pauseDurationTotal, pauseEvents } = message;
+
+    logger.info('Stopping stream via WebSocket', {
+        streamId,
+        duration,
+        pauseCount,
+        pauseDurationTotal,
+        pauseEventsCount: pauseEvents?.length,
+    });
+
+    const finalStatus = await streamManager.stopStream(streamId, {
+        duration,
+        pauseCount,
+        pauseDurationTotal,
+        pauseEvents,
+    });
 
     ws.send(
         JSON.stringify({
