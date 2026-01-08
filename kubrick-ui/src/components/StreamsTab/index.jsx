@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, Table, Tag, Statistic, Row, Col, Alert, Button, Empty, Spin, Tooltip } from 'antd';
 import {
     ReloadOutlined,
@@ -10,7 +10,6 @@ import {
     SyncOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import '../../styles/components/StreamsTab.css';
 
 const formatDuration = (ms) => {
@@ -34,7 +33,6 @@ const formatBytes = (bytes) => {
 };
 
 const StreamsTab = () => {
-    const { isLiveStreamingEnabled, isLoading: featuresLoading } = useFeatureFlags();
     const [autoRefresh, setAutoRefresh] = useState(false);
 
     const {
@@ -47,34 +45,15 @@ const StreamsTab = () => {
         queryFn: async () => {
             const response = await fetch('/api/streams/status');
             if (!response.ok) {
-                if (response.status === 404) {
-                    return null; // Feature disabled
-                }
                 throw new Error('Failed to fetch stream status');
             }
             const result = await response.json();
             return result.data.attributes;
         },
         refetchInterval: autoRefresh ? 5000 : false, // Refresh every 5 seconds when enabled
-        enabled: isLiveStreamingEnabled,
     });
 
-    // Feature disabled state
-    if (!featuresLoading && !isLiveStreamingEnabled) {
-        return (
-            <div className='streams-tab'>
-                <Alert
-                    message='Live Streaming Disabled'
-                    description='Live streaming is not enabled on this server. Set LIVE_STREAMING_ENABLED=true in the backend environment to enable this feature.'
-                    type='info'
-                    showIcon
-                    className='feature-disabled-alert'
-                />
-            </div>
-        );
-    }
-
-    if (isLoading || featuresLoading) {
+    if (isLoading) {
         return (
             <div className='streams-tab streams-loading'>
                 <Spin size='large' />
