@@ -1,10 +1,7 @@
 import * as gcp from './gcp.js';
 import * as s3 from './s3.js';
 
-const getProvider = () => {
-    const provider = process.env.STORAGE_PROVIDER || 'gcp';
-    return provider === 's3' ? s3 : gcp;
-};
+const provider = process.env.STORAGE_PROVIDER?.toLowerCase() === 's3' ? s3 : gcp;
 
 /**
  * Generate a storage key for a recording
@@ -31,7 +28,6 @@ export const generateStorageKey = (recordingId, sequence = 1) => {
  * @returns {Promise<string>} Signed URL
  */
 export const getSignedUrl = async (bucket, key, operation = 'read', contentType = 'video/webm') => {
-    const provider = getProvider();
     return provider.getSignedUrl(bucket, key, operation, contentType);
 };
 
@@ -41,7 +37,6 @@ export const getSignedUrl = async (bucket, key, operation = 'read', contentType 
  * @param {string} key - Object key
  */
 export const deleteFile = async (bucket, key) => {
-    const provider = getProvider();
     return provider.deleteFile(bucket, key);
 };
 
@@ -52,7 +47,6 @@ export const deleteFile = async (bucket, key) => {
  * @returns {Promise<boolean>}
  */
 export const fileExists = async (bucket, key) => {
-    const provider = getProvider();
     return provider.fileExists(bucket, key);
 };
 
@@ -66,7 +60,6 @@ export const fileExists = async (bucket, key) => {
  * @returns {Promise<{uploadId: string, bucket: string, key: string}>}
  */
 export const initResumableUpload = async (bucket, key, contentType = 'video/webm', fileSize, origin) => {
-    const provider = getProvider();
     return provider.initResumableUpload(bucket, key, contentType, fileSize, origin);
 };
 
@@ -81,7 +74,6 @@ export const initResumableUpload = async (bucket, key, contentType = 'video/webm
  * @returns {Promise<{uploadUrl: string, partNumber: number}>}
  */
 export const getChunkUploadUrl = async (bucket, key, uploadId, partNumber, chunkSize, totalSize) => {
-    const provider = getProvider();
     return provider.getChunkUploadUrl(bucket, key, uploadId, partNumber, chunkSize, totalSize);
 };
 
@@ -94,7 +86,6 @@ export const getChunkUploadUrl = async (bucket, key, uploadId, partNumber, chunk
  * @returns {Promise<{bucket: string, key: string}>}
  */
 export const completeResumableUpload = async (bucket, key, uploadId, parts) => {
-    const provider = getProvider();
     return provider.completeResumableUpload(bucket, key, uploadId, parts);
 };
 
@@ -105,7 +96,6 @@ export const completeResumableUpload = async (bucket, key, uploadId, parts) => {
  * @param {string} uploadId - Upload session ID
  */
 export const abortResumableUpload = async (bucket, key, uploadId) => {
-    const provider = getProvider();
     return provider.abortResumableUpload(bucket, key, uploadId);
 };
 
@@ -114,7 +104,7 @@ export const abortResumableUpload = async (bucket, key, uploadId) => {
  * @returns {string}
  */
 export const getProviderName = () => {
-    return process.env.STORAGE_PROVIDER || 'gcp';
+    return process.env.STORAGE_PROVIDER.toLowerCase();
 };
 
 // ============================================
@@ -128,7 +118,6 @@ export const getProviderName = () => {
  * @param {string} localPath - Local file path to upload
  */
 export const uploadStreamSegment = async (bucket, key, localPath) => {
-    const provider = getProvider();
     return provider.uploadFile(bucket, key, localPath, 'video/mp2t');
 };
 
@@ -139,8 +128,6 @@ export const uploadStreamSegment = async (bucket, key, localPath) => {
  * @param {string} localPath - Local file path to upload
  */
 export const uploadStreamManifest = async (bucket, key, localPath) => {
-    const provider = getProvider();
-    // Set short cache for live manifest
     return provider.uploadFile(bucket, key, localPath, 'application/vnd.apple.mpegurl', {
         cacheControl: 'no-cache, no-store, must-revalidate',
     });
@@ -153,8 +140,6 @@ export const uploadStreamManifest = async (bucket, key, localPath) => {
  * @returns {Promise<string>} Playback URL
  */
 export const getStreamPlaybackUrl = async (bucket, key) => {
-    const provider = getProvider();
-    // Long-lived read URL for playback
     return provider.getSignedUrl(bucket, key, 'read', 'application/vnd.apple.mpegurl');
 };
 
@@ -165,7 +150,6 @@ export const getStreamPlaybackUrl = async (bucket, key) => {
  * @returns {Promise<Buffer>}
  */
 export const downloadFile = async (bucket, key) => {
-    const provider = getProvider();
     return provider.downloadFile(bucket, key);
 };
 
@@ -176,6 +160,5 @@ export const downloadFile = async (bucket, key) => {
  * @returns {ReadableStream}
  */
 export const createReadStream = (bucket, key) => {
-    const provider = getProvider();
     return provider.createReadStream(bucket, key);
 };

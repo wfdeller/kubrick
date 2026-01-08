@@ -1,7 +1,6 @@
 import { WebSocketServer } from 'ws';
 import streamManager from './StreamManager.js';
 import Recording from '../../models/Recording.js';
-import { isLiveStreamingEnabled } from '../../utils/featureFlags.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -15,12 +14,6 @@ export const initWebSocketServer = (server) => {
     });
 
     wss.on('connection', (ws, req) => {
-        // Check feature flag
-        if (!isLiveStreamingEnabled()) {
-            ws.close(4403, 'Live streaming is not enabled');
-            return;
-        }
-
         let streamId = null;
         let isAuthenticated = false;
 

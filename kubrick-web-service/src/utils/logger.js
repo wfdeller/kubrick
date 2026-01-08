@@ -31,9 +31,7 @@ const jsonFormat = printf(({ level, message, timestamp, ...metadata }) => {
 
 // Determine log level from environment
 const getLogLevel = () => {
-    const level = process.env.LOG_LEVEL;
-    if (level) return level;
-    return process.env.NODE_ENV === 'production' ? 'info' : 'debug';
+    return process.env.LOG_LEVEL || 'info';
 };
 
 // Create logger instance

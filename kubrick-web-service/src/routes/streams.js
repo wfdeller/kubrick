@@ -1,7 +1,6 @@
 import express from 'express';
 import streamManager from '../services/streaming/StreamManager.js';
 import Recording from '../models/Recording.js';
-import { requireLiveStreaming, getFeatureFlags } from '../utils/featureFlags.js';
 import { downloadFile } from '../services/storage/index.js';
 import logger from '../utils/logger.js';
 
@@ -124,11 +123,8 @@ router.get('/:recordingId/hls/:segment', async (req, res, next) => {
 });
 
 // ============================================
-// LIVE STREAMING ROUTES (Feature flag required)
+// LIVE STREAMING ROUTES
 // ============================================
-
-// Apply feature flag check to remaining routes
-router.use(requireLiveStreaming);
 
 /**
  * GET /api/streams/status
@@ -137,15 +133,11 @@ router.use(requireLiveStreaming);
 router.get('/status', async (req, res, next) => {
     try {
         const systemStatus = streamManager.getSystemStatus();
-        const flags = getFeatureFlags();
 
         res.json({
             data: {
                 type: 'stream-status',
-                attributes: {
-                    ...systemStatus,
-                    featureFlags: flags,
-                },
+                attributes: systemStatus,
             },
         });
     } catch (err) {
