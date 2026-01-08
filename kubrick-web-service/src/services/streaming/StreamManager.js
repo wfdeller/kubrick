@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import HLSTranscoder from './HLSTranscoder.js';
-import { uploadStreamSegment, uploadStreamManifest, getStreamPlaybackUrl } from '../storage/index.js';
+import { uploadStreamSegment, uploadStreamManifest, getStreamPlaybackUrl, getBucketName } from '../storage/index.js';
+import Recording from '../../models/Recording.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -22,7 +23,7 @@ class StreamManager extends EventEmitter {
             throw new Error(`Stream ${recordingId} already exists`);
         }
 
-        const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
+        const bucket = getBucketName();
         const streamPrefix = `streams/${recordingId}`;
 
         const streamState = {
@@ -140,7 +141,7 @@ class StreamManager extends EventEmitter {
     }
 
     /**
-     * Stop a live stream
+     * Stop a live stream and update the recording
      */
     async stopStream(recordingId) {
         const transcoder = this.transcoders.get(recordingId);
@@ -158,13 +159,38 @@ class StreamManager extends EventEmitter {
         streamState.status = 'ended';
         streamState.endTime = Date.now();
 
+        const finalStatus = this.getStreamStatus(recordingId);
+
+        // Update the recording in database
+        try {
+            const recording = await Recording.findById(recordingId);
+            if (recording) {
+                recording.status = 'ready';
+                recording.isLiveStreaming = false;
+                recording.streamEndedAt = new Date();
+                recording.duration = Math.floor(finalStatus.duration / 1000);
+                recording.fileBytes = finalStatus.transcoder?.bytesReceived || 0;
+                recording.storageBucket = getBucketName();
+                recording.storageKey = `streams/${recordingId}/stream.m3u8`;
+                await recording.save();
+                logger.info('Updated recording after stream stop', {
+                    recordingId,
+                    status: 'ready',
+                    duration: recording.duration,
+                    fileBytes: recording.fileBytes,
+                });
+            }
+        } catch (err) {
+            logger.error('Failed to update recording after stream stop', { recordingId, error: err.message });
+        }
+
         // Keep stream state for a while for status queries
         // Clean up after 5 minutes
         setTimeout(() => {
             this.cleanupStream(recordingId);
         }, 5 * 60 * 1000);
 
-        return this.getStreamStatus(recordingId);
+        return finalStatus;
     }
 
     /**

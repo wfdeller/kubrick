@@ -1,7 +1,7 @@
 import express from 'express';
 import streamManager from '../services/streaming/StreamManager.js';
 import Recording from '../models/Recording.js';
-import { downloadFile } from '../services/storage/index.js';
+import { downloadFile, getBucketName } from '../services/storage/index.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -42,7 +42,7 @@ router.get('/:recordingId/hls/manifest.m3u8', async (req, res, next) => {
         }
 
         const manifestKey = recording.storageKey || `streams/${recordingId}/stream.m3u8`;
-        const bucket = recording.storageBucket || process.env.GCP_BUCKET_NAME || 'kubrick-videos';
+        const bucket = recording.storageBucket || getBucketName();
 
         try {
             const manifestContent = await downloadFile(bucket, manifestKey);
@@ -99,7 +99,7 @@ router.get('/:recordingId/hls/:segment', async (req, res, next) => {
             });
         }
 
-        const bucket = recording.storageBucket || process.env.GCP_BUCKET_NAME || 'kubrick-videos';
+        const bucket = recording.storageBucket || getBucketName();
         const segmentKey = `streams/${recordingId}/${segment}`;
 
         const segmentContent = await downloadFile(bucket, segmentKey);
@@ -298,19 +298,6 @@ router.post('/:recordingId/stop', async (req, res, next) => {
         const { recordingId } = req.params;
 
         const finalStatus = await streamManager.stopStream(recordingId);
-
-        // Update recording with HLS manifest location and mark as ready
-        const recording = await Recording.findById(recordingId);
-        if (recording) {
-            const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
-            recording.status = 'ready';
-            recording.isLiveStreaming = false;
-            recording.streamEndedAt = new Date();
-            recording.duration = Math.floor(finalStatus.duration / 1000); // Convert ms to seconds
-            recording.storageBucket = bucket;
-            recording.hlsManifestKey = `streams/${recordingId}/stream.m3u8`;
-            await recording.save();
-        }
 
         logger.info('Stopped live stream via API', { recordingId });
 

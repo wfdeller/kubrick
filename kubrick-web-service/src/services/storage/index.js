@@ -107,6 +107,18 @@ export const getProviderName = () => {
     return process.env.STORAGE_PROVIDER.toLowerCase();
 };
 
+/**
+ * Get the configured bucket name for the current storage provider
+ * @returns {string}
+ */
+export const getBucketName = () => {
+    const storageProvider = process.env.STORAGE_PROVIDER.toLowerCase();
+    if (storageProvider === 's3') {
+        return process.env.AWS_BUCKET_NAME;
+    }
+    return process.env.GCP_BUCKET_NAME;
+};
+
 // ============================================
 // STREAMING FUNCTIONS
 // ============================================

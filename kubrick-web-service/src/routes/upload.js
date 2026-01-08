@@ -8,6 +8,7 @@ import {
     completeResumableUpload,
     abortResumableUpload,
     getProviderName,
+    getBucketName,
 } from '../services/storage/index.js';
 import logger from '../utils/logger.js';
 
@@ -68,7 +69,7 @@ router.post('/presigned-url', async (req, res, next) => {
         // Generate storage key with recording ID and sequence
         const sequence = await getNextSequence();
         const storageKey = generateStorageKey(recordingId, sequence);
-        const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
+        const bucket = getBucketName();
 
         // Get presigned upload URL
         const uploadUrl = await getSignedUrl(bucket, storageKey, 'write', contentType);
@@ -177,7 +178,7 @@ router.post('/init-chunked', async (req, res, next) => {
         // Generate storage key with recording ID and sequence
         const sequence = await getNextSequence();
         const storageKey = generateStorageKey(recordingId, sequence);
-        const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
+        const bucket = getBucketName();
         const mimeType = contentType || 'video/webm';
 
         // Get origin for CORS (browser uploads)
@@ -449,7 +450,7 @@ router.post('/thumbnail-url', async (req, res, next) => {
             });
         }
 
-        const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
+        const bucket = getBucketName();
         const thumbnailKey = `thumbnails/${recordingId}.jpg`;
 
         // Get presigned upload URL for thumbnail

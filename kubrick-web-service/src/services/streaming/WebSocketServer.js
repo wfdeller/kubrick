@@ -1,6 +1,7 @@
 import { WebSocketServer } from 'ws';
 import streamManager from './StreamManager.js';
 import Recording from '../../models/Recording.js';
+import { getBucketName } from '../storage/index.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -122,11 +123,10 @@ async function handleStart(ws, message) {
     try {
         const recording = await Recording.findById(recordingId);
         if (recording) {
-            const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
             recording.isLiveStreaming = true;
             recording.streamStartedAt = new Date();
             recording.status = 'recording';
-            recording.storageBucket = bucket;
+            recording.storageBucket = getBucketName();
             await recording.save();
             logger.info('Updated recording for stream start', { recordingId, isLiveStreaming: true });
         }
@@ -156,31 +156,6 @@ async function handleStop(ws, streamId) {
     logger.info('Stopping stream via WebSocket', { streamId });
 
     const finalStatus = await streamManager.stopStream(streamId);
-
-    // Update recording with HLS manifest location and mark as ready
-    try {
-        const recording = await Recording.findById(streamId);
-        if (recording) {
-            const bucket = process.env.GCP_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'kubrick-videos';
-            recording.status = 'ready';
-            recording.isLiveStreaming = false;
-            recording.streamEndedAt = new Date();
-            recording.duration = Math.floor(finalStatus.duration / 1000);
-            recording.fileBytes = finalStatus.transcoder?.bytesReceived || 0;
-            recording.storageBucket = bucket;
-            recording.storageKey = `streams/${streamId}/stream.m3u8`;
-            await recording.save();
-            logger.info('Updated recording after stream stop', {
-                streamId,
-                status: 'ready',
-                duration: recording.duration,
-                fileBytes: recording.fileBytes,
-                storageKey: recording.storageKey,
-            });
-        }
-    } catch (err) {
-        logger.error('Failed to update recording after stream stop', { streamId, error: err.message });
-    }
 
     ws.send(
         JSON.stringify({
